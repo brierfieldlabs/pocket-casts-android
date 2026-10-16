@@ -7,13 +7,13 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.cardview.widget.CardView
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.RecyclerView
 import au.com.shiftyjelly.pocketcasts.compose.AppTheme
@@ -51,6 +51,10 @@ class FolderAdapter(
 ) : LockableListAdapter<FolderItem, RecyclerView.ViewHolder>(FolderItemDiffCallback()) {
 
     var badgeType = BadgeType.OFF
+
+    private companion object {
+        val badgePayload = Any()
+    }
 
     private val imageRequestFactory = PocketCastsImageRequestFactory(context, placeholderType = PlaceholderType.None).themed()
     private var podcastUuidToBadge: Map<String, Int> = emptyMap()
@@ -107,6 +111,27 @@ class FolderAdapter(
         }
     }
 
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int, payloads: MutableList<Any>) {
+        if (payloads.contains(badgePayload)) {
+            when (val item = getItem(position)) {
+                is FolderItem.Podcast -> (holder as PodcastViewHolder).bindBadge(
+                    item.podcast,
+                    badgeType,
+                    podcastUuidToBadge,
+                )
+
+                is FolderItem.Folder -> (holder as FolderViewHolder).bind(
+                    item.folder,
+                    item.podcasts,
+                    badgeType,
+                    podcastUuidToBadge,
+                )
+            }
+        } else {
+            super.onBindViewHolder(holder, position, payloads)
+        }
+    }
+
     override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
         super.onViewRecycled(holder)
         when (holder) {
@@ -119,24 +144,23 @@ class FolderAdapter(
     }
 
     fun setBadges(podcastUuidToBadge: Map<String, Int>) {
-        // don't update if nothing has changed
-        var changes = false
-        if (this.podcastUuidToBadge.size != podcastUuidToBadge.size) {
-            changes = true
-        } else {
-            podcastUuidToBadge.entries.forEach { (key, value) ->
-                val currentCount = this.podcastUuidToBadge[key]
-                if (currentCount == null || currentCount != value) {
-                    changes = true
-                }
-            }
-        }
-        if (!changes) {
-            return
-        }
+        val previousCounts = this.podcastUuidToBadge
+        if (previousCounts == podcastUuidToBadge) return
+
         this.podcastUuidToBadge = podcastUuidToBadge
         applyBadgesToExistingPodcasts()
-        notifyDataSetChanged()
+        for (position in 0 until itemCount) {
+            val changed = when (val item = getItem(position)) {
+                is FolderItem.Podcast -> previousCounts[item.uuid] != podcastUuidToBadge[item.uuid]
+
+                is FolderItem.Folder -> item.podcasts.any { podcast ->
+                    previousCounts[podcast.uuid] != podcastUuidToBadge[podcast.uuid]
+                }
+            }
+            if (changed) {
+                notifyItemChanged(position, badgePayload)
+            }
+        }
     }
 
     fun setFolderItems(items: List<FolderItem>) {
@@ -181,6 +205,28 @@ class FolderAdapter(
         val cardCornerRadius: Float = 4.dpToPx(view.resources.displayMetrics).toFloat()
         val isListLayout: Boolean = podcastGridLayout == PodcastGridLayoutType.LIST_VIEW
         val unplayedCountBadgeView = view.findViewById<ComposeView>(R.id.badge_view)
+        private val displayedBadgeCount = mutableIntStateOf(0)
+        private val displayedBadgeType = mutableStateOf(BadgeType.OFF)
+
+        init {
+            unplayedCountBadgeView.setContentWithViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow) {
+                AppTheme(theme.activeTheme) {
+                    CountBadge(
+                        count = displayedBadgeCount.intValue,
+                        style = when {
+                            displayedBadgeType.value == BadgeType.LATEST_EPISODE -> CountBadgeStyle.Small
+                            isListLayout -> CountBadgeStyle.Big
+                            else -> CountBadgeStyle.Medium
+                        },
+                        modifier = if (isListLayout) {
+                            Modifier
+                        } else {
+                            Modifier.wrapContentSize(align = Alignment.TopEnd)
+                        },
+                    )
+                }
+            }
+        }
 
         fun bind(podcast: Podcast, badgeType: BadgeType, podcastUuidToBadge: Map<String, Int>, clickListener: ClickListener) {
             button?.setOnClickListener { clickListener.onPodcastClick(podcast, itemView) }
@@ -189,26 +235,11 @@ class FolderAdapter(
             podcastTitle.showIf(isListLayout)
             author?.text = podcast.author
 
-            val unplayedEpisodeCount = podcastUuidToBadge[podcast.uuid] ?: 0
-            val badgeCount = when (badgeType) {
-                BadgeType.OFF -> 0
-                BadgeType.ALL_UNFINISHED -> unplayedEpisodeCount
-                BadgeType.LATEST_EPISODE -> min(1, unplayedEpisodeCount)
-            }
-            val displayBadgeCount = if (badgeCount > 99) 99 else badgeCount
-            unplayedCountBadgeView.let {
-                it.setBadgeContent(displayBadgeCount, badgeType)
-                it.showIf(displayBadgeCount > 0)
-            }
-            podcastCardView?.cardElevation = cardElevation
-            podcastCardView?.radius = cardCornerRadius
+            bindBadge(podcast, badgeType, podcastUuidToBadge)
+            podcastCardView?.cardElevation = if (isListLayout) cardElevation else 0f
+            podcastCardView?.radius = if (isListLayout) cardCornerRadius else 0f
             podcastCardView?.setCardBackgroundColor(Color.TRANSPARENT)
             podcastOverlay?.hide()
-
-            val badgeCountMessage = if (badgeType == BadgeType.OFF) "" else "$unplayedEpisodeCount new episodes. "
-            val contentDescription = "${podcast.title}. $badgeCountMessage Open podcast."
-            button?.contentDescription = contentDescription
-            podcastCardView?.contentDescription = contentDescription
 
             // Load image with custom listener to handle error state
             val imageRequest = imageRequestFactory
@@ -240,29 +271,21 @@ class FolderAdapter(
             view.context.imageLoader.enqueue(imageRequest)
         }
 
-        private fun ComposeView.setBadgeContent(
-            count: Int,
-            badgeType: BadgeType,
-        ) {
-            setContentWithViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow) {
-                AppTheme(theme.activeTheme) {
-                    CountBadge(
-                        count = count,
-                        style = when {
-                            (badgeType == BadgeType.LATEST_EPISODE) -> CountBadgeStyle.Small
-                            isListLayout -> CountBadgeStyle.Big
-                            else -> CountBadgeStyle.Medium
-                        },
-                        modifier = if (isListLayout) {
-                            Modifier
-                        } else {
-                            Modifier
-                                .wrapContentSize(align = Alignment.TopEnd)
-                                .offset(x = 6.dp, y = (-6).dp)
-                        },
-                    )
-                }
+        fun bindBadge(podcast: Podcast, badgeType: BadgeType, podcastUuidToBadge: Map<String, Int>) {
+            val unplayedEpisodeCount = podcastUuidToBadge[podcast.uuid] ?: 0
+            val count = when (badgeType) {
+                BadgeType.OFF -> 0
+                BadgeType.ALL_UNFINISHED -> unplayedEpisodeCount
+                BadgeType.LATEST_EPISODE -> min(1, unplayedEpisodeCount)
             }
+            displayedBadgeCount.intValue = count
+            displayedBadgeType.value = badgeType
+            unplayedCountBadgeView.showIf(count > 0)
+
+            val badgeCountMessage = if (badgeType == BadgeType.OFF) "" else "$unplayedEpisodeCount new episodes. "
+            val contentDescription = "${podcast.title}. $badgeCountMessage Open podcast."
+            button?.contentDescription = contentDescription
+            podcastCardView?.contentDescription = contentDescription
         }
 
         override fun onStartDragging() = Unit

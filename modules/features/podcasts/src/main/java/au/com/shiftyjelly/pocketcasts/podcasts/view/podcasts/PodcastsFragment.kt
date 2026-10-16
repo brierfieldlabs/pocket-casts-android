@@ -2,7 +2,6 @@ package au.com.shiftyjelly.pocketcasts.podcasts.view.podcasts
 
 import android.content.Intent
 import android.content.res.Configuration
-import android.graphics.Rect
 import android.os.Bundle
 import android.os.Parcelable
 import android.view.LayoutInflater
@@ -54,6 +53,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.SimpleItemAnimator
 import au.com.shiftyjelly.pocketcasts.ads.AdReportFragment
 import au.com.shiftyjelly.pocketcasts.analytics.SourceView
 import au.com.shiftyjelly.pocketcasts.compose.AppTheme
@@ -206,7 +206,7 @@ class PodcastsFragment :
         )
         binding.recyclerView.let {
             it.adapter = adapter
-            it.addItemDecoration(SpaceItemDecoration())
+            (it.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
             ItemTouchHelper(dragAndDropCallback).attachToRecyclerView(it)
         }
 
@@ -579,11 +579,10 @@ class PodcastsFragment :
         }
 
         val listOuterPadding = resources.getDimensionPixelSize(VR.dimen.list_outer_adding)
-        val gridOuterPadding = resources.getDimensionPixelSize(VR.dimen.grid_outer_padding)
         viewLifecycleOwner.lifecycleScope.launch {
             settings.bottomInset.collect {
                 val padding = when (settings.podcastGridLayout.value) {
-                    PodcastGridLayoutType.LARGE_ARTWORK, PodcastGridLayoutType.SMALL_ARTWORK -> gridOuterPadding
+                    PodcastGridLayoutType.LARGE_ARTWORK, PodcastGridLayoutType.SMALL_ARTWORK -> 0
                     PodcastGridLayoutType.LIST_VIEW -> listOuterPadding
                 }
                 realBinding?.recyclerView?.updatePadding(padding, padding, padding, padding + it)
@@ -716,19 +715,6 @@ class PodcastsFragment :
                 location = ad.location.analyticsValue,
             ),
         )
-    }
-
-    inner class SpaceItemDecoration : RecyclerView.ItemDecoration() {
-        private val gridItemPadding = resources.getDimensionPixelSize(VR.dimen.grid_item_padding)
-        override fun getItemOffsets(outRect: Rect, view: View, parent: RecyclerView, state: RecyclerView.State) {
-            when (settings.podcastGridLayout.value) {
-                PodcastGridLayoutType.LARGE_ARTWORK, PodcastGridLayoutType.SMALL_ARTWORK -> {
-                    outRect.set(gridItemPadding, gridItemPadding, gridItemPadding, gridItemPadding)
-                }
-
-                PodcastGridLayoutType.LIST_VIEW -> Unit
-            }
-        }
     }
 }
 
