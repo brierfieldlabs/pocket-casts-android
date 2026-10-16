@@ -39,6 +39,8 @@ android {
         }
 
         named("debugProd") {
+            // PodcastGPT is installed for everyday listening; avoid debug-only startup overhead.
+            isDebuggable = false
             manifestPlaceholders["appIcon"] = "@mipmap/ic_launcher_3"
         }
 
