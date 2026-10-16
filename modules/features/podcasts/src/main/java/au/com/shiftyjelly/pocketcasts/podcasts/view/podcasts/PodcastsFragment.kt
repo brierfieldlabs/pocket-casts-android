@@ -1,6 +1,5 @@
 package au.com.shiftyjelly.pocketcasts.podcasts.view.podcasts
 
-import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 import android.os.Parcelable
@@ -8,7 +7,6 @@ import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewTreeObserver
 import androidx.appcompat.widget.Toolbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -38,7 +36,6 @@ import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
@@ -48,23 +45,18 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
-import au.com.shiftyjelly.pocketcasts.ads.AdReportFragment
 import au.com.shiftyjelly.pocketcasts.analytics.SourceView
 import au.com.shiftyjelly.pocketcasts.compose.AppTheme
 import au.com.shiftyjelly.pocketcasts.compose.CallOnce
-import au.com.shiftyjelly.pocketcasts.compose.ad.AdBanner
-import au.com.shiftyjelly.pocketcasts.compose.ad.rememberAdColors
 import au.com.shiftyjelly.pocketcasts.compose.components.NoContentBanner
 import au.com.shiftyjelly.pocketcasts.compose.components.TipPosition
 import au.com.shiftyjelly.pocketcasts.compose.components.Tooltip
 import au.com.shiftyjelly.pocketcasts.compose.extensions.setContentWithViewCompositionStrategy
-import au.com.shiftyjelly.pocketcasts.models.entity.BlazeAd
 import au.com.shiftyjelly.pocketcasts.models.entity.Podcast
 import au.com.shiftyjelly.pocketcasts.models.to.RefreshState
 import au.com.shiftyjelly.pocketcasts.models.type.PodcastsSortType
@@ -85,7 +77,6 @@ import au.com.shiftyjelly.pocketcasts.ui.helper.FragmentHostListener
 import au.com.shiftyjelly.pocketcasts.utils.extensions.hideShadow
 import au.com.shiftyjelly.pocketcasts.utils.featureflag.Feature
 import au.com.shiftyjelly.pocketcasts.utils.featureflag.FeatureFlag
-import au.com.shiftyjelly.pocketcasts.utils.log.LogBuffer
 import au.com.shiftyjelly.pocketcasts.views.adapter.LockingDragAndDropCallback
 import au.com.shiftyjelly.pocketcasts.views.extensions.quickScrollToTop
 import au.com.shiftyjelly.pocketcasts.views.fragments.BaseFragment
@@ -94,8 +85,6 @@ import au.com.shiftyjelly.pocketcasts.views.fragments.TopScrollable
 import au.com.shiftyjelly.pocketcasts.views.helper.NavigationIcon
 import au.com.shiftyjelly.pocketcasts.views.helper.ToolbarColors
 import au.com.shiftyjelly.pocketcasts.views.helper.UiUtil
-import com.automattic.eventhorizon.BannerAdImpressionEvent
-import com.automattic.eventhorizon.BannerAdTappedEvent
 import com.automattic.eventhorizon.CreateFolderSourceType
 import com.automattic.eventhorizon.EventHorizon
 import com.automattic.eventhorizon.FolderChoosePodcastsShownEvent
@@ -112,9 +101,6 @@ import com.automattic.eventhorizon.PodcastsListPodcastTappedEvent
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.withCreationCallback
 import javax.inject.Inject
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.channels.trySendBlocking
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 import au.com.shiftyjelly.pocketcasts.images.R as IR
 import au.com.shiftyjelly.pocketcasts.localization.R as LR
@@ -149,8 +135,7 @@ class PodcastsFragment :
     private var podcastOptionsDialog: PodcastsOptionsDialog? = null
     private var folderOptionsDialog: FolderOptionsDialog? = null
     private var folderAdapter: FolderAdapter? = null
-    private var bannerAdAdapter: BannerAdAdapter? = null
-    private var adapter: ConcatAdapter? = null
+    private var adapter: FolderAdapter? = null
 
     private var realBinding: FragmentPodcastsBinding? = null
     private val binding: FragmentPodcastsBinding get() = realBinding ?: throw IllegalStateException("Trying to access the binding outside of the view lifecycle.")
@@ -182,18 +167,7 @@ class PodcastsFragment :
             theme = theme,
         )
         this.folderAdapter = folderAdapter
-        val bannerAdAdapter = BannerAdAdapter(
-            themeType = theme.activeTheme,
-            onAdClick = ::openAd,
-            onAdOptionsClick = ::openAdReportFlow,
-            onAdImpression = ::trackAdImpression,
-        )
-        this.bannerAdAdapter = bannerAdAdapter
-
-        val config = ConcatAdapter.Config.Builder()
-            .setIsolateViewTypes(false)
-            .build()
-        val adapter = ConcatAdapter(config, bannerAdAdapter, folderAdapter)
+        val adapter = folderAdapter
         this.adapter = adapter
 
         binding.appBarLayout.hideShadow()
@@ -202,7 +176,11 @@ class PodcastsFragment :
             scope = viewLifecycleOwner.lifecycleScope,
             adapter = folderAdapter,
             commitItems = viewModel::reorderItems,
-            canDrag = { !settings.hidePodcastsWithNoUnfinishedEpisodes.value },
+            canDrag = {
+                !settings.hidePodcastsWithNoUnfinishedEpisodes.value &&
+                    !settings.sortPodcastsByUnfinishedCount.value &&
+                    !settings.reversePodcastsSort.value
+            },
         )
         binding.recyclerView.let {
             it.adapter = adapter
@@ -277,12 +255,6 @@ class PodcastsFragment :
                     binding.emptyView.isVisible = isEmpty && !uiState.isLoadingItems
                     binding.swipeRefreshLayout.isGone = isEmpty
                 }
-            }
-        }
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.activeAd.collect { activeAd ->
-                bannerAdAdapter?.submitList(listOfNotNull(activeAd))
             }
         }
 
@@ -478,29 +450,7 @@ class PodcastsFragment :
     private fun setupEmptyStateView() {
         val folderUuid = folderUuid
 
-        val emptyViewVisibilityFlow = callbackFlow<Boolean> {
-            val view = binding.emptyView
-            var isVisible = view.isVisible
-            send(isVisible)
-
-            val listener = object : ViewTreeObserver.OnGlobalLayoutListener {
-                override fun onGlobalLayout() {
-                    val newVisibility = view.isVisible
-                    if (isVisible != newVisibility) {
-                        isVisible = newVisibility
-                    }
-                    trySendBlocking(isVisible)
-                }
-            }
-            view.viewTreeObserver.addOnGlobalLayoutListener(listener)
-            awaitClose {
-                view.viewTreeObserver.removeOnGlobalLayoutListener(listener)
-            }
-        }
-
         binding.emptyView.setContentWithViewCompositionStrategy {
-            val activeAd by viewModel.activeAd.collectAsState()
-            val isViewVisible by emptyViewVisibilityFlow.collectAsState(false)
             val uiState by viewModel.uiState.collectAsState()
 
             AppTheme(themeType = theme.activeTheme) {
@@ -512,21 +462,6 @@ class PodcastsFragment :
                         .verticalScroll(rememberScrollState())
                         .padding(16.dp),
                 ) {
-                    activeAd?.let { ad ->
-                        AdBanner(
-                            ad = ad,
-                            colors = rememberAdColors().bannerAd,
-                            onAdClick = { openAd(ad) },
-                            onOptionsClick = { openAdReportFlow(ad) },
-                        )
-
-                        LaunchedEffect(ad.id, isViewVisible) {
-                            if (isViewVisible) {
-                                trackAdImpression(ad)
-                            }
-                        }
-                    }
-
                     Spacer(
                         modifier = Modifier.weight(1f),
                     )
@@ -562,8 +497,8 @@ class PodcastsFragment :
 
     private fun setupGridView(savedInstanceState: Parcelable? = listState) {
         val layoutManager = when (settings.podcastGridLayout.value) {
-            PodcastGridLayoutType.LARGE_ARTWORK -> createAdGridLayoutManager(UiUtil.getGridColumnCount(false, context))
-            PodcastGridLayoutType.SMALL_ARTWORK -> createAdGridLayoutManager(UiUtil.getGridColumnCount(true, context))
+            PodcastGridLayoutType.LARGE_ARTWORK -> createGridLayoutManager(UiUtil.getGridColumnCount(false, context))
+            PodcastGridLayoutType.SMALL_ARTWORK -> createGridLayoutManager(UiUtil.getGridColumnCount(true, context))
             PodcastGridLayoutType.LIST_VIEW -> LinearLayoutManager(activity, RecyclerView.VERTICAL, false)
         }
         val badgeType = settings.podcastBadgeType.value
@@ -593,20 +528,7 @@ class PodcastsFragment :
         layoutManager.onRestoreInstanceState(savedInstanceState)
     }
 
-    private fun createAdGridLayoutManager(spanCount: Int): GridLayoutManager {
-        return GridLayoutManager(requireActivity(), spanCount).apply {
-            val defaultLookup = GridLayoutManager.DefaultSpanSizeLookup()
-            spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
-                override fun getSpanSize(position: Int): Int {
-                    val itemViewTtype = adapter?.getItemViewType(position)
-                    return when (itemViewTtype) {
-                        AdapterViewTypeIds.BANNER_AD_ID -> spanCount
-                        else -> defaultLookup.getSpanSize(position)
-                    }
-                }
-            }
-        }
-    }
+    private fun createGridLayoutManager(spanCount: Int) = GridLayoutManager(requireActivity(), spanCount)
 
     override fun onPodcastClick(podcast: Podcast, view: View) {
         eventHorizon.track(PodcastsListPodcastTappedEvent)
@@ -681,40 +603,6 @@ class PodcastsFragment :
         binding.tooltipComposeView.isGone = true
         binding.tooltipComposeView.disposeComposition()
         viewModel.onTooltipClosed()
-    }
-
-    private fun openAd(ad: BlazeAd) {
-        trackAdTapped(ad)
-        runCatching {
-            val intent = Intent(Intent.ACTION_VIEW, ad.url.toUri())
-            startActivity(intent)
-        }.onFailure { LogBuffer.e("Ads", it, "Failed to open an ad: ${ad.id}") }
-    }
-
-    private fun openAdReportFlow(ad: BlazeAd) {
-        if (parentFragmentManager.findFragmentByTag("ad_report") == null) {
-            AdReportFragment
-                .newInstance(ad, podcastColors = null)
-                .show(parentFragmentManager, "ad_report")
-        }
-    }
-
-    private fun trackAdImpression(ad: BlazeAd) {
-        eventHorizon.track(
-            BannerAdImpressionEvent(
-                id = ad.id,
-                location = ad.location.analyticsValue,
-            ),
-        )
-    }
-
-    fun trackAdTapped(ad: BlazeAd) {
-        eventHorizon.track(
-            BannerAdTappedEvent(
-                id = ad.id,
-                location = ad.location.analyticsValue,
-            ),
-        )
     }
 }
 

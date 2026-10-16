@@ -36,7 +36,7 @@ class PodcastsOptionsDialog(
             .addTextOption(
                 titleId = LR.string.podcasts_menu_sort_by,
                 imageId = IR.drawable.ic_sort,
-                valueId = settings.podcastsSortType.value.labelId,
+                valueId = if (settings.sortPodcastsByUnfinishedCount.value) LR.string.podcasts_sort_by_unfinished_count else settings.podcastsSortType.value.labelId,
                 click = {
                     openSortOptions()
                     trackTapOnModalOption(ModalOption.SORT_BY)
@@ -111,13 +111,24 @@ class PodcastsOptionsDialog(
         for (order in PodcastsSortType.entries) {
             dialog.addCheckedOption(
                 titleId = order.labelId,
-                checked = order.clientId == sortOrder.clientId,
+                checked = !settings.sortPodcastsByUnfinishedCount.value && order.clientId == sortOrder.clientId,
                 click = {
+                    settings.sortPodcastsByUnfinishedCount.set(false, updateModifiedAt = false)
                     settings.podcastsSortType.set(order, updateModifiedAt = true)
                     trackSortByChanged(order)
                 },
             )
         }
+        dialog.addCheckedOption(
+            titleId = LR.string.podcasts_sort_by_unfinished_count,
+            checked = settings.sortPodcastsByUnfinishedCount.value,
+            click = { settings.sortPodcastsByUnfinishedCount.set(true, updateModifiedAt = false) },
+        )
+        dialog.addCheckedOption(
+            titleId = LR.string.podcasts_sort_reverse_order,
+            checked = settings.reversePodcastsSort.value,
+            click = { settings.reversePodcastsSort.set(!settings.reversePodcastsSort.value, updateModifiedAt = false) },
+        )
         fragmentManager?.let {
             dialog.show(it, "podcasts_sort_dialog")
             sortDialog = dialog

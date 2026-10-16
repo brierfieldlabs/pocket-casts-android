@@ -98,4 +98,30 @@ class PodcastVisibilityTest {
         assertTrue(filterPodcastsWithoutUnfinishedEpisodes(items, emptyMap()).isEmpty())
         assertEquals(items, filterPodcastsWithoutUnfinishedEpisodes(items, mapOf("unfinished" to 1)))
     }
+
+    @Test
+    fun sortsByUnfinishedCountIncludingFolderTotals() {
+        val items = listOf(
+            FolderItem.Podcast(unfinished),
+            FolderItem.Folder(folder, listOf(caughtUp, inProgress)),
+            FolderItem.Podcast(inProgress),
+        )
+        val sorted = sortLibraryItemsByUnfinishedCount(
+            items,
+            mapOf("unfinished" to 3, "caught-up" to 4, "in-progress" to 1),
+            reverse = false,
+        )
+        assertEquals(listOf("folder", "unfinished", "in-progress"), sorted.map { it.uuid })
+    }
+
+    @Test
+    fun reverseUnfinishedSortShowsSmallestCountsFirst() {
+        val items = listOf(FolderItem.Podcast(unfinished), FolderItem.Podcast(caughtUp))
+        val sorted = sortLibraryItemsByUnfinishedCount(
+            items,
+            mapOf("unfinished" to 12, "caught-up" to 2),
+            reverse = true,
+        )
+        assertEquals(listOf("caught-up", "unfinished"), sorted.map { it.uuid })
+    }
 }

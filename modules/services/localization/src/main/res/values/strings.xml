@@ -34,6 +34,8 @@
     <string name="add_to_up_next_bottom">Play last in Up Next</string>
     <string name="add_to_up_next_question">Add to up next?</string>
     <string name="archive">Archive</string>
+    <string name="podcasts_sort_by_unfinished_count">Unfinished episodes</string>
+    <string name="podcasts_sort_reverse_order">Reverse order</string>
     <string name="hide_caught_up_podcasts">Hide caught-up podcasts</string>
     <string name="hide_caught_up_podcasts_summary">Hide podcasts with no unarchived episodes left to finish.</string>
     <string name="no_unfinished_podcasts">All caught up</string>

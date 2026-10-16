@@ -248,6 +248,18 @@ class SettingsImpl @Inject constructor(
         toString = { it.clientId.toString() },
     )
 
+    override val sortPodcastsByUnfinishedCount = UserSetting.BoolPref(
+        sharedPrefKey = "sortPodcastsByUnfinishedCount",
+        defaultValue = false,
+        sharedPrefs = sharedPreferences,
+    )
+
+    override val reversePodcastsSort = UserSetting.BoolPref(
+        sharedPrefKey = "reversePodcastsSort",
+        defaultValue = false,
+        sharedPrefs = sharedPreferences,
+    )
+
     override val hidePodcastsWithNoUnfinishedEpisodes = UserSetting.BoolPref(
         sharedPrefKey = "hidePodcastsWithNoUnfinishedEpisodes",
         defaultValue = false,

@@ -9,7 +9,6 @@ import au.com.shiftyjelly.pocketcasts.models.type.PodcastsSortType
 import au.com.shiftyjelly.pocketcasts.models.type.SignInState
 import au.com.shiftyjelly.pocketcasts.preferences.Settings
 import au.com.shiftyjelly.pocketcasts.preferences.model.BadgeType
-import au.com.shiftyjelly.pocketcasts.repositories.ads.BlazeAdsManager
 import au.com.shiftyjelly.pocketcasts.repositories.notification.NotificationHelper
 import au.com.shiftyjelly.pocketcasts.repositories.podcast.EpisodeManager
 import au.com.shiftyjelly.pocketcasts.repositories.podcast.FolderManager
@@ -55,7 +54,6 @@ class PodcastsViewModel @AssistedInject constructor(
     private val eventHorizon: EventHorizon,
     private val userManager: UserManager,
     private val notificationHelper: NotificationHelper,
-    blazeAdsManager: BlazeAdsManager,
     @Assisted private val folderUuid: String?,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(UiState(isLoadingItems = true))
@@ -71,12 +69,6 @@ class PodcastsViewModel @AssistedInject constructor(
             hasShownPromptBefore = hasShownPermissionBefore,
         )
     }
-
-    val activeAd = if (folderUuid == null) {
-        blazeAdsManager.findPodcastListAd()
-    } else {
-        flowOf(null)
-    }.stateIn(viewModelScope, started = SharingStarted.Eagerly, initialValue = null)
 
     init {
         viewModelScope.launch {
@@ -123,25 +115,33 @@ class PodcastsViewModel @AssistedInject constructor(
             }
         }
 
-        val unfinishedEpisodeCounts: Flow<Map<String, Int>?> = settings.hidePodcastsWithNoUnfinishedEpisodes.flow
-            .flatMapLatest { hide ->
-                if (hide) {
-                    episodeManager.observePodcastUuidToBadgeUnfinished()
-                } else {
-                    flowOf(null)
-                }
+        val unfinishedEpisodeCounts: Flow<Map<String, Int>> = combine(
+            settings.hidePodcastsWithNoUnfinishedEpisodes.flow,
+            settings.sortPodcastsByUnfinishedCount.flow,
+        ) { hide, sortByCount -> hide || sortByCount }
+            .flatMapLatest { required ->
+                if (required) episodeManager.observePodcastUuidToBadgeUnfinished().map { it.orEmpty() } else flowOf(emptyMap())
             }
 
-        return combine(libraryState, unfinishedEpisodeCounts) { state, counts ->
-            if (counts == null) {
-                state
+        return combine(
+            libraryState,
+            unfinishedEpisodeCounts,
+            settings.hidePodcastsWithNoUnfinishedEpisodes.flow,
+            settings.sortPodcastsByUnfinishedCount.flow,
+            settings.reversePodcastsSort.flow,
+        ) { state, counts, hide, sortByCount, reverse ->
+            val visibleItems = if (hide) filterPodcastsWithoutUnfinishedEpisodes(state.items, counts) else state.items
+            val sortedItems = if (sortByCount) {
+                sortLibraryItemsByUnfinishedCount(visibleItems, counts, reverse)
+            } else if (reverse) {
+                visibleItems.reversed()
             } else {
-                val filteredItems = filterPodcastsWithoutUnfinishedEpisodes(state.items, counts)
-                state.copy(
-                    items = filteredItems,
-                    hasHiddenPodcasts = filteredItems != state.items,
-                )
+                visibleItems
             }
+            state.copy(
+                items = sortedItems,
+                hasHiddenPodcasts = hide && visibleItems != state.items,
+            )
         }
     }
 
@@ -230,7 +230,7 @@ class PodcastsViewModel @AssistedInject constructor(
     val refreshStateFlow = settings.refreshStateFlow
 
     suspend fun reorderItems(items: List<FolderItem>) {
-        if (settings.hidePodcastsWithNoUnfinishedEpisodes.value) return
+        if (settings.hidePodcastsWithNoUnfinishedEpisodes.value || settings.sortPodcastsByUnfinishedCount.value || settings.reversePodcastsSort.value) return
 
         eventHorizon.track(PodcastsListReorderedEvent)
         viewModelScope.launch {
