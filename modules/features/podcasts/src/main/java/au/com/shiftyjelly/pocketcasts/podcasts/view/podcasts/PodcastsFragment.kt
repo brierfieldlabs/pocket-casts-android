@@ -74,16 +74,12 @@ import au.com.shiftyjelly.pocketcasts.podcasts.view.folders.FolderCreateFragment
 import au.com.shiftyjelly.pocketcasts.podcasts.view.folders.FolderCreateSharedViewModel
 import au.com.shiftyjelly.pocketcasts.podcasts.view.folders.FolderEditFragment
 import au.com.shiftyjelly.pocketcasts.podcasts.view.folders.FolderEditPodcastsFragment
-import au.com.shiftyjelly.pocketcasts.podcasts.view.folders.SuggestedFoldersFragment
 import au.com.shiftyjelly.pocketcasts.podcasts.view.notifications.EnableNotificationsPromptFragment
 import au.com.shiftyjelly.pocketcasts.podcasts.view.podcast.PodcastFragment
 import au.com.shiftyjelly.pocketcasts.podcasts.viewmodel.PodcastsViewModel
 import au.com.shiftyjelly.pocketcasts.preferences.Settings
 import au.com.shiftyjelly.pocketcasts.preferences.model.PodcastGridLayoutType
 import au.com.shiftyjelly.pocketcasts.search.SearchFragment
-import au.com.shiftyjelly.pocketcasts.settings.onboarding.OnboardingFlow
-import au.com.shiftyjelly.pocketcasts.settings.onboarding.OnboardingLauncher
-import au.com.shiftyjelly.pocketcasts.settings.onboarding.OnboardingUpgradeSource
 import au.com.shiftyjelly.pocketcasts.ui.extensions.getColor
 import au.com.shiftyjelly.pocketcasts.ui.helper.FragmentHostListener
 import au.com.shiftyjelly.pocketcasts.utils.extensions.hideShadow
@@ -119,7 +115,6 @@ import javax.inject.Inject
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import au.com.shiftyjelly.pocketcasts.images.R as IR
 import au.com.shiftyjelly.pocketcasts.localization.R as LR
@@ -227,15 +222,6 @@ class PodcastsFragment :
         )
         toolbar.setOnMenuItemClickListener(this)
 
-        toolbar.menu.findItem(R.id.folders_locked).setOnMenuItemClickListener {
-            if (viewModel.areSuggestedFoldersAvailable.value) {
-                showSuggestedFoldersCreation(SuggestedFoldersFragment.Source.ToolbarButton)
-            } else {
-                OnboardingLauncher.openOnboardingFlow(requireActivity(), OnboardingFlow.Upsell(OnboardingUpgradeSource.FOLDERS))
-            }
-            true
-        }
-
         binding.swipeRefreshLayout.setOnRefreshListener {
             viewModel.refreshPodcasts()
         }
@@ -269,7 +255,6 @@ class PodcastsFragment :
                         toolbarColors = ToolbarColors.theme(
                             theme = theme,
                             context = requireContext(),
-                            excludeMenuItems = listOf(R.id.folders_locked),
                         )
                         navigationIcon = NavigationIcon.None
                     } else {
@@ -283,7 +268,6 @@ class PodcastsFragment :
                         navigationIcon = navigationIcon,
                     )
 
-                    toolbar.menu.findItem(R.id.folders_locked)?.isVisible = !isSignedInAsPlusOrPatron
                     toolbar.menu.findItem(R.id.create_folder)?.isVisible = rootFolder && isSignedInAsPlusOrPatron
                     toolbar.menu.findItem(R.id.search_podcasts)?.isVisible = rootFolder
 
@@ -345,16 +329,7 @@ class PodcastsFragment :
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.refreshSuggestedFolders()
-            }
-        }
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.areSuggestedFoldersAvailable.combine(viewModel.notificationPromptState) { areFoldersAvailable, notificationsState ->
-                    areFoldersAvailable to notificationsState
-                }.collect { (areFoldersAvailable, notificationState) ->
-                    // Don't stack popups, notification prompt takes precedence over suggested folders popup
+                viewModel.notificationPromptState.collect { notificationState ->
                     if (!notificationState.hasPermission && !notificationState.hasShownPromptBefore && FeatureFlag.isEnabled(Feature.NOTIFICATIONS_REVAMP)) {
                         if (parentFragmentManager.findFragmentByTag("notifications_prompt") == null) {
                             EnableNotificationsPromptFragment
@@ -363,10 +338,6 @@ class PodcastsFragment :
                         }
                     } else {
                         (parentFragmentManager.findFragmentByTag("notifications_prompt") as? DialogFragment)?.dismiss()
-
-                        if (areFoldersAvailable && viewModel.isEligibleForSuggestedFoldersPopup()) {
-                            showSuggestedFoldersCreation(SuggestedFoldersFragment.Source.Popup)
-                        }
                     }
                 }
             }
@@ -400,7 +371,7 @@ class PodcastsFragment :
 
             R.id.create_folder -> {
                 eventHorizon.track(PodcastsListFolderButtonTappedEvent)
-                handleFolderCreation()
+                showCustomFolderCreation()
                 true
             }
 
@@ -462,28 +433,10 @@ class PodcastsFragment :
         }
     }
 
-    private fun handleFolderCreation() {
-        if (viewModel.areSuggestedFoldersAvailable.value) {
-            showSuggestedFoldersCreation(SuggestedFoldersFragment.Source.ToolbarButton)
-        } else {
-            showCustomFolderCreation()
-        }
-    }
-
     private fun showCustomFolderCreation() {
         FolderCreateFragment
             .newInstance(CreateFolderSourceType.PodcastsList)
             .show(parentFragmentManager, "create_folder_card")
-    }
-
-    private fun showSuggestedFoldersCreation(
-        source: SuggestedFoldersFragment.Source,
-    ) {
-        if (parentFragmentManager.findFragmentByTag("suggested_folders") == null) {
-            SuggestedFoldersFragment
-                .newInstance(source)
-                .show(parentFragmentManager, "suggested_folders")
-        }
     }
 
     override fun onPause() {

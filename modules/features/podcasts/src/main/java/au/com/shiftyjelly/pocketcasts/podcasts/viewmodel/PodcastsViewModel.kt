@@ -7,7 +7,6 @@ import au.com.shiftyjelly.pocketcasts.models.entity.Podcast
 import au.com.shiftyjelly.pocketcasts.models.to.FolderItem
 import au.com.shiftyjelly.pocketcasts.models.type.PodcastsSortType
 import au.com.shiftyjelly.pocketcasts.models.type.SignInState
-import au.com.shiftyjelly.pocketcasts.podcasts.view.folders.SuggestedFoldersPopupPolicy
 import au.com.shiftyjelly.pocketcasts.preferences.Settings
 import au.com.shiftyjelly.pocketcasts.preferences.model.BadgeType
 import au.com.shiftyjelly.pocketcasts.repositories.ads.BlazeAdsManager
@@ -15,7 +14,6 @@ import au.com.shiftyjelly.pocketcasts.repositories.notification.NotificationHelp
 import au.com.shiftyjelly.pocketcasts.repositories.podcast.EpisodeManager
 import au.com.shiftyjelly.pocketcasts.repositories.podcast.FolderManager
 import au.com.shiftyjelly.pocketcasts.repositories.podcast.PodcastManager
-import au.com.shiftyjelly.pocketcasts.repositories.podcast.SuggestedFoldersManager
 import au.com.shiftyjelly.pocketcasts.repositories.user.UserManager
 import com.automattic.eventhorizon.EpisodeRecentlyPlayedSortOptionTooltipDismissedEvent
 import com.automattic.eventhorizon.EpisodeRecentlyPlayedSortOptionTooltipShownEvent
@@ -31,7 +29,6 @@ import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -56,8 +53,6 @@ class PodcastsViewModel @AssistedInject constructor(
     private val folderManager: FolderManager,
     private val settings: Settings,
     private val eventHorizon: EventHorizon,
-    private val suggestedFoldersManager: SuggestedFoldersManager,
-    private val suggestedFoldersPopupPolicy: SuggestedFoldersPopupPolicy,
     private val userManager: UserManager,
     private val notificationHelper: NotificationHelper,
     blazeAdsManager: BlazeAdsManager,
@@ -65,10 +60,6 @@ class PodcastsViewModel @AssistedInject constructor(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(UiState(isLoadingItems = true))
     val uiState = _uiState.asStateFlow()
-
-    val areSuggestedFoldersAvailable = suggestedFoldersManager.observeSuggestedFolders()
-        .map { it.isNotEmpty() }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, initialValue = false)
 
     private val notificationsPermissionState = MutableStateFlow(notificationHelper.hasNotificationsPermission())
     val notificationPromptState = combine(
@@ -313,20 +304,6 @@ class PodcastsViewModel @AssistedInject constructor(
                 ),
             )
         }
-    }
-
-    private var refreshSuggestedFoldersJob: Job? = null
-
-    fun refreshSuggestedFolders() {
-        if (refreshSuggestedFoldersJob?.isActive != true) {
-            refreshSuggestedFoldersJob = viewModelScope.launch {
-                suggestedFoldersManager.refreshSuggestedFolders()
-            }
-        }
-    }
-
-    fun isEligibleForSuggestedFoldersPopup(): Boolean {
-        return suggestedFoldersPopupPolicy.isEligibleForPopup()
     }
 
     fun shouldShowTooltip() = settings.showPodcastsRecentlyPlayedSortOrderTooltip.value
