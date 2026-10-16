@@ -209,7 +209,7 @@ class FolderAdapter(
         private val displayedBadgeType = mutableStateOf(BadgeType.OFF)
 
         init {
-            unplayedCountBadgeView.setContentWithViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow) {
+            unplayedCountBadgeView.setContentWithViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindowOrReleasedFromPool) {
                 AppTheme(theme.activeTheme) {
                     CountBadge(
                         count = displayedBadgeCount.intValue,

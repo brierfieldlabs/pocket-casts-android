@@ -1849,6 +1849,7 @@
     <string name="settings_use_episode_artwork_customization_section">Customization</string>
     <string name="settings_use_episode_artwork_customization_description">Select if you want to see episode artwork in these sections of the app</string>
     <string name="settings_version">Version %1$s (%2$s)</string>
+    <string name="podcastgpt_version" translatable="false">PodcastGPT %1$s (Pocket Casts %2$s, build %3$s)</string>
     <string name="settings_view">View</string>
     <string name="settings_website_link">website link</string>
     <string name="settings_auto_up_next_title">Auto add to Up Next</string>
