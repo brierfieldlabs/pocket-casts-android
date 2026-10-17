@@ -19,6 +19,20 @@ android {
         applicationId = project.property("applicationId").toString()
         targetSdk = project.property("targetSdkVersion") as Int
         multiDexEnabled = true
+
+        // Keep PodcastGPT's version independent of Pocket Casts' upstream version.properties.
+        val podcastGptVersion = providers.fileContents(
+            rootProject.layout.projectDirectory.file("podcastgpt.version"),
+        ).asText.get().trim()
+        val parts = podcastGptVersion.split(".").map {
+            it.toIntOrNull() ?: error("Invalid PodcastGPT version: $podcastGptVersion")
+        }
+        require(parts.size == 3 && parts[0] in 1..2099 && parts[1] in 0..999 && parts[2] in 0..999) {
+            "PodcastGPT version must be MAJOR.MINOR.PATCH"
+        }
+        versionName = podcastGptVersion
+        // Derive Android's increasing versionCode from the same SemVer.
+        versionCode = parts[0] * 1_000_000 + parts[1] * 1_000 + parts[2]
     }
 
     sourceSets {
@@ -39,6 +53,9 @@ android {
         }
 
         named("debugProd") {
+            // PodcastGPT is installed for everyday listening; avoid debug-only startup overhead.
+            isDebuggable = false
+            buildConfigField("boolean", "DEBUG", "false")
             manifestPlaceholders["appIcon"] = "@mipmap/ic_launcher_3"
         }
 
