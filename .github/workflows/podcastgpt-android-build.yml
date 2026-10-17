@@ -5,6 +5,7 @@ on:
     branches:
       - add/podcastgpt-customisations
       - fix/podcastgpt-startup-debug-overhead
+      - feature/podcastgpt-tile-actions
 
 permissions:
   contents: read
@@ -28,9 +29,12 @@ jobs:
         env:
           EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
         run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-      - name: Compile podcasts feature before full APK assembly
+      - name: Compile changed features before full APK assembly
         run: |
-          ./gradlew :modules:features:podcasts:compileDebugProdKotlin --no-daemon --max-workers=2 \
+          ./gradlew :modules:features:account:compileDebugProdKotlin \
+            :modules:features:profile:compileDebugProdKotlin \
+            :modules:features:settings:compileDebugProdKotlin \
+            :modules:features:podcasts:compileDebugProdKotlin --no-daemon --max-workers=2 \
             -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8"
       - name: Assemble debugProd APK
         run: |
