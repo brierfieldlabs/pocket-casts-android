@@ -557,7 +557,7 @@ class PodcastsFragment :
             add(0, MENU_MARK_ALL_PLAYED, 3, getString(LR.string.podcastgpt_mark_all_played))
             add(0, MENU_PODCAST_SETTINGS, 4, getString(LR.string.podcast_settings))
             add(0, MENU_SHARE, 5, getString(LR.string.share))
-            add(0, MENU_UNSUBSCRIBE, 6, getString(LR.string.unsubscribe))
+            add(0, MENU_UNSUBSCRIBE, 6, getString(LR.string.podcastgpt_unsubscribe))
         }
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
@@ -629,7 +629,7 @@ class PodcastsFragment :
                     ConfirmationDialog()
                         .setTitle(title)
                         .setSummary(getString(LR.string.podcast_unsubscribe_warning))
-                        .setButtonType(ConfirmationDialog.ButtonType.Danger(getString(LR.string.unsubscribe)))
+                        .setButtonType(ConfirmationDialog.ButtonType.Danger(getString(LR.string.podcastgpt_unsubscribe)))
                         .setOnConfirm { viewModel.unsubscribe(podcast) }
                         .show(parentFragmentManager, "podcastgpt_unsubscribe")
                 }
