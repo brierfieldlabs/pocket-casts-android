@@ -1,4 +1,4 @@
-name: PodcastGPT Android APK build
+name: Podcast Player Android APK build
 
 on:
   pull_request:
@@ -52,7 +52,7 @@ jobs:
           package=$("$aapt" dump badging "$apk" | grep "^package:")
           echo "$package"
           grep -F "name='au.com.shiftyjelly.pocketcasts.debug'" <<< "$package"
-          version=$(tr -d '\r\n' < podcastgpt.version)
+          version=$(tr -d '\r\n' < podcast-player.version)
           grep -F "versionName='$version'" <<< "$package"
           version_code=$(sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p" <<< "$package")
           IFS=. read -r major minor patch <<< "$version"
@@ -60,11 +60,11 @@ jobs:
           "$apksigner" verify --print-certs "$apk" |
             grep -F "certificate SHA-256 digest: a7a8cc75251243fcabc1c5ae6c2eaa3c74ad9a464ae4a5679e56820cbd9eadc8"
           mkdir -p dist
-          cp "$apk" "dist/PodcastGPT-v${version}.apk"
-          sha256sum "dist/PodcastGPT-v${version}.apk"
+          cp "$apk" "dist/Podcast-Player-v${version}.apk"
+          sha256sum "dist/Podcast-Player-v${version}.apk"
       - uses: actions/upload-artifact@v4
         with:
-          name: PodcastGPT-APK
-          path: dist/PodcastGPT-v*.apk
+          name: Podcast-Player-APK
+          path: dist/Podcast-Player-v*.apk
           if-no-files-found: error
           retention-days: 14

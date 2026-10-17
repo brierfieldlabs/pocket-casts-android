@@ -127,6 +127,7 @@ class PodcastsFragment :
         private const val MENU_PODCAST_SETTINGS = 5
         private const val MENU_SHARE = 6
         private const val MENU_UNSUBSCRIBE = 7
+        private const val MENU_PLAY_ALL_UNFINISHED = 8
         const val ARG_FOLDER_UUID = "ARG_FOLDER_UUID"
 
         fun newInstance(folderUuid: String): PodcastsFragment {
@@ -412,7 +413,17 @@ class PodcastsFragment :
                 show()
             }
         } else {
-            podcastOptionsDialog = PodcastsOptionsDialog(this, settings, eventHorizon).apply {
+            podcastOptionsDialog = PodcastsOptionsDialog(this, settings, eventHorizon) {
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val count = viewModel.queueVisiblePodcastsByUnfinishedCount()
+                    val message = if (count == 0) {
+                        getString(LR.string.podcast_player_queue_none)
+                    } else {
+                        getString(LR.string.podcast_player_queued_count, count)
+                    }
+                    showSnackBar(message)
+                }
+            }.apply {
                 show()
             }
         }
@@ -552,8 +563,9 @@ class PodcastsFragment :
     override fun onPodcastLongClick(podcast: Podcast, view: View) {
         val popup = PopupMenu(requireContext(), view)
         popup.menu.apply {
-            add(0, MENU_QUEUE_UNFINISHED, 0, getString(LR.string.podcastgpt_queue_unfinished))
-            add(0, MENU_PLAY_OLDEST, 1, getString(LR.string.podcastgpt_play_oldest))
+            add(0, MENU_PLAY_ALL_UNFINISHED, 0, getString(LR.string.podcast_player_play_visible_unfinished))
+            add(0, MENU_QUEUE_UNFINISHED, 1, getString(LR.string.podcastgpt_queue_unfinished))
+            add(0, MENU_PLAY_OLDEST, 2, getString(LR.string.podcastgpt_play_oldest))
             add(0, MENU_DOWNLOAD_UNFINISHED, 2, getString(LR.string.podcastgpt_download_unfinished))
             add(0, MENU_MARK_ALL_PLAYED, 3, getString(LR.string.podcastgpt_mark_all_played))
             add(0, MENU_PODCAST_SETTINGS, 4, getString(LR.string.podcast_settings))
@@ -562,6 +574,15 @@ class PodcastsFragment :
         }
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
+                MENU_PLAY_ALL_UNFINISHED -> viewLifecycleOwner.lifecycleScope.launch {
+                    val episodes = viewModel.unfinishedEpisodes(podcast)
+                    if (episodes.isEmpty()) {
+                        showSnackBar(getString(LR.string.podcastgpt_no_unfinished))
+                    } else {
+                        viewModel.playUnfinishedOldestFirst(episodes)
+                    }
+                }
+
                 MENU_QUEUE_UNFINISHED, MENU_PLAY_OLDEST -> viewLifecycleOwner.lifecycleScope.launch {
                     val episodes = viewModel.unfinishedEpisodes(podcast)
                     if (episodes.isEmpty()) {

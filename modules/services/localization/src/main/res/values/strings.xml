@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name" translatable="false">Pocket Casts</string>
+    <string name="app_name" translatable="false">Podcast Player</string>
     <string name="pocket_casts" translatable="false">@string/app_name</string>
     <string name="pocket_casts_plus" translatable="false">Pocket Casts Plus</string>
     <string name="pocket_casts_plus_short" translatable="false">Plus</string>
@@ -30,6 +30,14 @@
     <string name="playing_bookmark">Playing \"%s\"</string>
     <string name="skipping_to">Skipping to %s</string>
     <string name="add_to_up_next">Add to Up Next</string>
+    <string name="podcast_player_play_visible_unfinished">Play unfinished episodes (oldest first)</string>
+    <string name="podcast_player_queue_fewest_first">Queue library: fewest unfinished first</string>
+    <string name="podcast_player_queued_count">Added %1$d episodes to Up Next</string>
+    <string name="podcast_player_queue_none">No more unfinished episodes to queue</string>
+    <string name="podcast_player_play_from_episode">Play from here (oldest to newest)</string>
+    <string name="podcast_player_dismiss_episode">Dismiss episode</string>
+    <string name="podcast_player_restore_episode">Restore episode</string>
+    <string name="podcast_player_episode_dismissed">Episode dismissed without marking it as played</string>
     <string name="podcastgpt_queue_unfinished">Add unfinished to Up Next (oldest first)</string>
     <string name="podcastgpt_play_oldest">Play oldest unfinished episode next</string>
     <string name="podcastgpt_download_unfinished">Download unfinished episodes</string>
@@ -39,18 +47,18 @@
     <string name="add_to_up_next_top">Play next in Up Next</string>
     <string name="add_to_up_next_bottom">Play last in Up Next</string>
     <string name="add_to_up_next_question">Add to up next?</string>
-    <string name="archive">Archive</string>
+    <string name="archive">Dismiss</string>
     <string name="podcasts_sort_by_unfinished_count">Unfinished episodes</string>
     <string name="podcasts_sort_reverse_order">Reverse order</string>
     <string name="hide_caught_up_podcasts">Hide caught-up podcasts</string>
-    <string name="hide_caught_up_podcasts_summary">Hide podcasts with no unarchived episodes left to finish.</string>
+    <string name="hide_caught_up_podcasts_summary">Hide podcasts with no visible unfinished episodes left to finish.</string>
     <string name="no_unfinished_podcasts">All caught up</string>
     <string name="no_unfinished_podcasts_summary">There are no unfinished episodes in these podcasts.</string>
     <string name="show_all_podcasts">Show all podcasts</string>
-    <string name="unarchive">Unarchive</string>
-    <string name="archive_episode">Archive episode</string>
-    <string name="archived">Archived</string>
-    <string name="auto_archive">Auto archive</string>
+    <string name="unarchive">Restore</string>
+    <string name="archive_episode">Dismiss episode</string>
+    <string name="archived">Dismissed</string>
+    <string name="auto_archive">Auto-dismiss</string>
     <string name="auto_download">Auto download</string>
     <string name="bookmark">Bookmark</string>
     <string name="bookmarks">Bookmarks</string>
@@ -133,7 +141,7 @@
     <string name="deselect_all_below">Deselect all below</string>
     <string name="select_all_below">Select all below</string>
     <string name="share_podcast">Share podcast</string>
-    <string name="show_archived">Show archived</string>
+    <string name="show_archived">Show dismissed</string>
     <string name="sign_in">Sign in</string>
     <string name="sign_out">Sign out</string>
     <string name="skip_back">Skip back</string>
@@ -163,7 +171,7 @@
     <string name="subscribe">Follow</string>
     <string name="subscribe_to">Subscribe to %s</string>
     <string name="upgrade_to">Upgrade to %s</string>
-    <string name="unarchive_all">Unarchive all</string>
+    <string name="unarchive_all">Restore all</string>
     <string name="get_pocket_casts_plus">Get Pocket Casts Plus</string>
     <string name="unplayed">Unplayed</string>
     <string name="unsubscribe">Unfollow</string>
@@ -324,12 +332,12 @@
     <string name="tv_playlist_play_all_save_and_play">Save and play</string>
     <string name="tv_playlist_play_all_play_without_saving">Play without saving</string>
     <plurals name="tv_playlist_all_archived">
-        <item quantity="one">The only episode of this playlist has been archived.</item>
-        <item quantity="other">All %1$d episodes of this playlist have been archived.</item>
+        <item quantity="one">The only episode of this playlist has been dismissed.</item>
+        <item quantity="other">All %1$d episodes of this playlist have been dismissed.</item>
     </plurals>
     <plurals name="tv_podcast_all_archived">
-        <item quantity="one">The only episode of this podcast has been archived.</item>
-        <item quantity="other">All %1$d episodes of this podcast have been archived.</item>
+        <item quantity="one">The only episode of this podcast has been dismissed.</item>
+        <item quantity="other">All %1$d episodes of this podcast have been dismissed.</item>
     </plurals>
     <string name="tv_playlist_empty_title">No episodes</string>
     <string name="tv_playlist_empty_subtitle">Either it’s time to celebrate completing this list or edit your rules in the mobile app to get some more.</string>
@@ -337,8 +345,8 @@
     <string name="tv_episode_details">Episode details</string>
     <string name="tv_episode_marked_as_played">Marked as played</string>
     <string name="tv_episode_marked_as_unplayed">Marked as unplayed</string>
-    <string name="tv_episode_archived">Archived</string>
-    <string name="tv_episode_unarchived">Unarchived</string>
+    <string name="tv_episode_archived">Dismissed</string>
+    <string name="tv_episode_unarchived">Restored</string>
     <string name="tv_episode_will_play_next">Will play next</string>
     <string name="tv_episode_will_play_last">Will play last</string>
     <string name="tv_episode_removed_from_up_next">Removed from Up Next</string>
@@ -357,7 +365,7 @@
     <string name="tv_trim_silence_changed">Trim silence set to %1$s</string>
     <string name="tv_trim_silence_off">Trim silence off</string>
     <string name="tv_mark_played_confirmation_title">Mark as played?</string>
-    <string name="tv_archive_confirmation_title">Archive episode?</string>
+    <string name="tv_archive_confirmation_title">Dismiss episode?</string>
     <string name="tv_stop_playback_confirmation_message">This will stop the current playback.</string>
     <string name="tv_your_podcasts_empty_title">Time to fill this up</string>
     <string name="tv_your_podcasts_empty_subtitle">Followed podcasts show up here, ready to play.</string>
@@ -424,14 +432,14 @@
     <string name="marked_as_unplayed_singular">1 episode marked as unplayed</string>
     <string name="marked_as_unplayed_plural">%1$d episodes marked as unplayed</string>
 
-    <string name="archive_episodes_singular">Archive 1 episode</string>
-    <string name="archive_episodes_plural">Archive %1$d episodes</string>
+    <string name="archive_episodes_singular">Dismiss 1 episode</string>
+    <string name="archive_episodes_plural">Dismiss %1$d episodes</string>
     <string name="archive_title" translatable="false">@string/archive</string>
-    <string name="archive_summary">You should only do this if you don\'t want to see them anymore.</string>
-    <string name="archived_episodes_singular">1 episode archived</string>
-    <string name="archived_episodes_plural">%1$d episodes archived</string>
-    <string name="unarchived_episodes_singular">1 episode unarchived</string>
-    <string name="unarchived_episodes_plural">%1$d episodes unarchived</string>
+    <string name="archive_summary">Dismissed episodes can be restored later without marking them as played.</string>
+    <string name="archived_episodes_singular">1 episode dismissed</string>
+    <string name="archived_episodes_plural">%1$d episodes dismissed</string>
+    <string name="unarchived_episodes_singular">1 episode restored</string>
+    <string name="unarchived_episodes_plural">%1$d episodes restored</string>
 
     <string name="starred_episodes_singular">1 episode starred</string>
     <string name="starred_episodes_plural">%1$d episodes starred</string>
@@ -599,7 +607,7 @@
     </plurals>
     <string name="player_open_url_failed">Could not find a browser to open %s.</string>
     <string name="player_archive_title" translatable="false">@string/archive</string>
-    <string name="player_archive_summary">Are you sure you want to archive this episode?</string>
+    <string name="player_archive_summary">Are you sure you want to dismiss this episode?</string>
     <string name="player_up_next_clear">Clearing your Up Next list cannot be undone</string>
     <string name="player_up_next_clear_button">Clear Up Next</string>
     <string name="player_mark_as_played">Are you sure you want to mark this episode as played?</string>
@@ -715,7 +723,7 @@
     <string name="podcasts_time_to_add_some_podcasts_summary">Coming from another app? Import your podcasts via Profile > Settings > Import and Export.\n\nIf you’re looking for inspiration try the Discover tab.</string>
     <string name="podcasts_empty_folder">Your folder is empty</string>
     <string name="podcasts_empty_folder_summary">Add podcasts to your folder and they’ll appear here.</string>
-    <string name="podcasts_unarchive">Unarchive</string>
+    <string name="podcasts_unarchive">Restore</string>
     <string name="podcasts_unsubscribe_are_you_sure" translatable="false">@string/are_you_sure</string>
     <string name="podcasts_up_next" translatable="false">@string/up_next</string>
     <string name="podcasts_add_episode">Add</string>
@@ -762,17 +770,17 @@
         <item quantity="one">%1$d podcast selected</item>
         <item quantity="other">%1$d podcasts selected</item>
     </plurals>
-    <string name="podcast_archive_all">Archive all</string>
-    <string name="podcast_archive_all_played">Archive all played</string>
-    <string name="podcast_archive_played">You should only do this if you don\'t want to see them anymore.</string>
+    <string name="podcast_archive_all">Dismiss all</string>
+    <string name="podcast_archive_all_played">Dismiss all played</string>
+    <string name="podcast_archive_played">Dismissed episodes can be restored later without marking them as played.</string>
     <string name="podcast_download_all">Download all</string>
     <string name="podcast_episode_file_not_uploaded">File not uploaded</string>
-    <string name="podcast_episode_manually_unarchived">Episode Manually Unarchived</string>
-    <string name="podcast_episode_manually_unarchived_summary">It won\'t be auto archived by your new episode limit of %d</string>
+    <string name="podcast_episode_manually_unarchived">Episode restored</string>
+    <string name="podcast_episode_manually_unarchived_summary">This episode will be excluded from the new limit of %d</string>
     <string name="podcast_episode_playback_error">Playback Error</string>
     <string name="podcast_episode_starred">Episode starred</string>
-    <string name="podcast_episode_summary_plural">%1$d episodes &#x2022; %2$d archived</string>
-    <string name="podcast_episode_summary_singular">1 episode &#x2022; %d archived</string>
+    <string name="podcast_episode_summary_plural">%1$d episodes &#x2022; %2$d dismissed</string>
+    <string name="podcast_episode_summary_singular">1 episode &#x2022; %d dismissed</string>
     <string name="podcast_episode_unstarred">Episode unstarred</string>
     <string name="podcast_episodes_limited">Limited to %d most recent episodes</string>
     <string name="podcast_episodes_options" translatable="false">@string/options</string>
@@ -791,7 +799,7 @@
     <string name="podcast_group_played" translatable="false">@string/played</string>
     <string name="podcast_group_season">Season</string>
     <string name="podcast_group_unplayed" translatable="false">@string/unplayed</string>
-    <string name="podcast_hide_archived">Hide archived</string>
+    <string name="podcast_hide_archived">Hide dismissed</string>
     <string name="podcast_load_error">There was an error loading the podcast.</string>
     <string name="podcast_feed_update_tooltip_title">Fresh episodes, coming right up!</string>
     <string name="podcast_feed_update_tooltip_subtitle">Pull down or use this menu to see if there\'s something new.</string>
@@ -803,7 +811,7 @@
     <string name="podcast_no_bookmarks_found">No bookmarks found</string>
     <string name="podcast_no_episodes_found">No episodes found</string>
     <string name="podcast_no_episodes">There are no episodes in this podcast</string>
-    <string name="podcast_no_episodes_all_archived">All %d episodes of this podcast have been archived</string>
+    <string name="podcast_no_episodes_all_archived">All %d episodes of this podcast have been dismissed</string>
     <string name="podcast_no_bookmarks_matching">This podcast has no bookmarks matching your search criteria. Try another keyword.</string>
     <string name="podcast_no_episodes_matching">We couldn’t find any episode for that search. Try another keyword.</string>
     <string name="podcast_notification_new_episode" translatable="false"><![CDATA[<i>%1$s</i> %2$s]]></string>
@@ -825,7 +833,7 @@
     <string name="podcast_settings_add_to_up_next_summary">Queue new episodes automatically</string>
     <string name="podcast_settings_auto_archive" translatable="false">@string/auto_archive</string>
     <string name="podcast_settings_auto_archive_custom">Custom for this podcast</string>
-    <string name="podcast_settings_auto_archive_custom_summary">Need more fine grained control? Enable auto archive settings for this podcast</string>
+    <string name="podcast_settings_auto_archive_custom_summary">Customise automatic dismissal for this podcast</string>
     <string name="podcast_settings_auto_download" translatable="false">@string/auto_download</string>
     <string name="podcast_settings_auto_download_summary">Download new episodes automatically</string>
     <string name="podcast_settings_playback_effects">Playback effects</string>
@@ -1121,7 +1129,7 @@
     <string name="new_playlists_title_placeholder">Playlist’s name</string>
     <string name="new_smart_playlist_banner_body">Automatically add episodes based on rules</string>
     <string name="new_smart_playlist_banner_title">Make into smart playlist</string>
-    <string name="play_all_no_episodes_message">All episodes archived. Add or unarchive to play.</string>
+    <string name="play_all_no_episodes_message">All episodes dismissed. Add or restore to play.</string>
     <string name="playlist_archive_all" translatable="false">@string/podcast_archive_all</string>
     <string name="playlist_artwork_description">Playlist’s artwork</string>
     <string name="playlist_download_all" translatable="false">@string/podcast_download_all</string>
@@ -1130,11 +1138,11 @@
     <string name="playlist_episode_unavailable_title">Episode unavailable</string>
     <string name="playlist_episode_unavailable_description">The podcast creator deleted this episode. It will stay in your playlist until you remove it.</string>
     <string name="playlist_episode_unavailable_cta">Remove from playlist</string>
-    <string name="playlist_episodes_archived_count">%1$d archived</string>
+    <string name="playlist_episodes_archived_count">%1$d dismissed</string>
     <string name="playlist_episodes_archived_title">No episodes</string>
     <plurals name="playlist_episodes_archived_description">
-        <item quantity="one">Your episode in this playlist has been archived</item>
-        <item quantity="other">All %1$d episodes of this playlist have been archived</item>
+        <item quantity="one">Your episode in this playlist has been dismissed</item>
+        <item quantity="other">All %1$d episodes of this playlist have been dismissed</item>
     </plurals>
     <string name="playlist_episodes_hide_archived" translatable="false">@string/podcast_hide_archived</string>
     <string name="playlist_episodes_show_archived" translatable="false">@string/show_archived</string>
@@ -1553,16 +1561,16 @@
     <string name="settings_app_icon_title">Title</string>
     <string name="settings_app_icon_updated">Icon updated</string>
     <string name="settings_app_icon_updated_message_v2">This new icon may take a few minutes to appear. If your Home screen shortcut disappears, add Pocket Casts again from your all apps screen.</string>
-    <string name="settings_apply_archived_hide">Would you like to change all your existing podcasts to hide archived?</string>
-    <string name="settings_apply_archived_show">Would you like to change all your existing podcasts to show archived?</string>
+    <string name="settings_apply_archived_hide">Would you like to hide dismissed episodes in all existing podcasts?</string>
+    <string name="settings_apply_archived_show">Would you like to show dismissed episodes in all existing podcasts?</string>
     <string name="settings_apply_group_by">Would you like to change all your existing podcasts to be grouped by %s?</string>
     <string name="settings_apply_to_existing">Apply to existing</string>
     <string name="settings_apply_to_existing_podcasts">Apply to existing podcasts?</string>
     <string name="settings_audio_only">Audio only</string>
     <string name="settings_audio_only_summary">If on, episodes with video will play as audio only, saving data.</string>
     <string name="settings_auto_archive_episode_limit">Episode limit</string>
-    <string name="settings_auto_archive_episode_limit_summary">For shows that release hourly or daily episodes, setting an episode limit can help keep only the most recent ones, while archiving any that are older.</string>
-    <string name="settings_auto_archive_inactive">Archive inactive episodes</string>
+    <string name="settings_auto_archive_episode_limit_summary">For shows that release hourly or daily episodes, setting an episode limit can help keep only the most recent ones, while dismissing any that are older.</string>
+    <string name="settings_auto_archive_inactive">Dismiss inactive episodes</string>
     <string name="settings_auto_archive_inactive_1_week">After 1 week</string>
     <string name="settings_auto_archive_inactive_24_hours">After 24 hours</string>
     <string name="settings_auto_archive_inactive_2_days">After 2 days</string>
@@ -1581,8 +1589,8 @@
     <string name="settings_auto_archive_played_after_playing">After playing</string>
     <string name="settings_auto_archive_played_never">Never</string>
     <string name="settings_auto_archive_starred">Include starred episodes</string>
-    <string name="settings_auto_archive_starred_summary">Starred episodes will be auto archived</string>
-    <string name="settings_auto_archive_time_limits">Archive episodes after set time limits. Downloads are removed when the episode is archived.</string>
+    <string name="settings_auto_archive_starred_summary">Starred episodes will be automatically dismissed</string>
+    <string name="settings_auto_archive_time_limits">Dismiss episodes after set time limits. Downloads are removed when the episode is dismissed.</string>
     <string name="settings_auto_download_stop_all">Stop all downloads</string>
     <string name="settings_auto_download_stopping_all">Stopping all downloads</string>
     <string name="settings_auto_download_charging">Only when charging</string>
@@ -1764,8 +1772,8 @@
     <string name="settings_show_archived" translatable="false">@string/show_archived</string>
     <string name="settings_show_archived_action_hide">Hide</string>
     <string name="settings_show_archived_action_show">Show</string>
-    <string name="settings_show_archived_summary_hide">New podcasts you follow won\'t show archived episodes.</string>
-    <string name="settings_show_archived_summary_show">New podcasts you follow will show archived episodes.</string>
+    <string name="settings_show_archived_summary_hide">New podcasts you follow won\'t show dismissed episodes.</string>
+    <string name="settings_show_archived_summary_show">New podcasts you follow will show dismissed episodes.</string>
     <string name="settings_show_artwork">Show artwork on lock screen</string>
     <string name="settings_show_artwork_details">This will also show artwork on connected Bluetooth devices, watches, etc.</string>
     <string name="settings_skip_back_time">Skip back time</string>
@@ -1884,7 +1892,7 @@
     <string name="settings_stats_funny_air_balloon">During which time you could have gone around the world %1$,.0f times in an air balloon.</string>
     <string name="settings_stats_funny_searches">During which time %1$,.0f Google searches were performed. Bazinga.</string>
     <string name="settings_stats_share_app_failed">No apps installed that accept images.</string>
-    <string name="settings_auto_archive_no_starred_summary">Starred episodes won\'t be auto archived</string>
+    <string name="settings_auto_archive_no_starred_summary">Starred episodes won\'t be automatically dismissed</string>
     <string name="settings_select_podcasts">Select Podcasts</string>
     <string name="settings_notification_silent">Silent</string>
     <string name="settings_whats_new">What\'s new</string>
@@ -1914,7 +1922,7 @@
     <string name="settings_storage_sd_card_number">SD Card %s</string>
     <string name="settings_storage_free_out_of">%1$s free out of %2$s</string>
     <string name="settings_storage_using">Using %s</string>
-    <string name="settings_archive_played">Archive played episodes</string>
+    <string name="settings_archive_played">Dismiss played episodes</string>
     <string name="settings_archive_played_dialog">Played episodes</string>
     <string name="settings_auto_archive_inactive_dialog">Inactive episodes</string>
     <string name="settings_theme_light">Light</string>

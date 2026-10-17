@@ -451,6 +451,48 @@ class PodcastViewModel @Inject constructor(
         }
     }
 
+    // Dismiss uses the existing archived flag: it hides the episode without
+    // changing its played status or playback position, and syncs to web.
+    suspend fun setEpisodeDismissed(episode: PodcastEpisode, dismissed: Boolean) {
+        withContext(Dispatchers.IO) {
+            if (dismissed && !episode.isArchived) {
+                episodeManager.archiveBlocking(episode, playbackManager)
+            } else if (!dismissed && episode.isArchived) {
+                episodeManager.unarchiveBlocking(episode)
+                episode.isArchived = false
+            }
+        }
+    }
+
+    // Starts with the selected unfinished episode, then plays newer visible
+    // episodes of this podcast. Completed or dismissed episodes are excluded.
+    fun playFromEpisodeOldestFirst(selected: PodcastEpisode): Boolean {
+        val chronological = (uiState.value as? UiState.Loaded)?.episodes
+            ?.filter { !it.isFinished && !it.isArchived }
+            ?.sortedWith(compareBy<PodcastEpisode> { it.publishedDate }.thenBy { it.uuid })
+            .orEmpty()
+        val start = chronological.indexOfFirst { it.uuid == selected.uuid }
+        if (start == -1) return false
+        playbackManager.playEpisodes(
+            chronological.drop(start).take(settings.getMaxUpNextEpisodes()),
+            sourceView = SourceView.PODCAST_SCREEN,
+        )
+        return true
+    }
+
+    // Play the unfinished episodes visible in this podcast regardless of sort
+    // order. This explicit action replaces the listening queue.
+    fun playVisibleUnfinishedOldestFirst(): Boolean {
+        val episodes = (uiState.value as? UiState.Loaded)?.episodes
+            ?.filter { !it.isFinished && !it.isArchived }
+            ?.sortedWith(compareBy<PodcastEpisode> { it.publishedDate }.thenBy { it.uuid })
+            ?.take(settings.getMaxUpNextEpisodes())
+            .orEmpty()
+        if (episodes.isEmpty()) return false
+        playbackManager.playEpisodes(episodes, sourceView = SourceView.PODCAST_SCREEN)
+        return true
+    }
+
     fun downloadAll() {
         val episodes = (uiState.value as? UiState.Loaded)?.episodes ?: return
         val trimmedList = episodes.subList(0, min(Settings.MAX_DOWNLOAD, episodes.count())).map(PodcastEpisode::uuid)
@@ -916,7 +958,9 @@ private fun Flowable<CombinedData>.buildUiState(
         ) { (searchList, episodeList), (bookmarks, _) ->
             val episodeCount = episodeList.size
             val archivedCount = episodeList.count { it.isArchived }
-            val showArchivedWithSearch = episodeSearchResults.searchUuids != null || showArchived
+            // Search must not resurrect dismissed/archived episodes unless
+            // the listener explicitly chose Show archived.
+            val showArchivedWithSearch = showArchived
             val filteredList =
                 if (showArchivedWithSearch) searchList else searchList.filter { !it.isArchived }
             val episodeLimit = podcast.autoArchiveEpisodeLimit?.value
