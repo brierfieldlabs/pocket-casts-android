@@ -102,6 +102,7 @@ import com.automattic.eventhorizon.PodcastsListFolderButtonTappedEvent
 import com.automattic.eventhorizon.PodcastsListFolderTappedEvent
 import com.automattic.eventhorizon.PodcastsListOptionsButtonTappedEvent
 import com.automattic.eventhorizon.PodcastsListPodcastTappedEvent
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.withCreationCallback
 import javax.inject.Inject
@@ -637,6 +638,10 @@ class PodcastsFragment :
             true
         }
         popup.show()
+    }
+
+    private fun showSnackBar(message: String) {
+        Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
     }
 
     override fun onFolderClick(folderUuid: String, isUserInitiated: Boolean) {
