@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - add/podcastgpt-customisations
+      - fix/podcastgpt-startup-debug-overhead
 
 permissions:
   contents: read

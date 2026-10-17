@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.Toolbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -68,9 +69,11 @@ import au.com.shiftyjelly.pocketcasts.podcasts.view.folders.FolderEditFragment
 import au.com.shiftyjelly.pocketcasts.podcasts.view.folders.FolderEditPodcastsFragment
 import au.com.shiftyjelly.pocketcasts.podcasts.view.notifications.EnableNotificationsPromptFragment
 import au.com.shiftyjelly.pocketcasts.podcasts.view.podcast.PodcastFragment
+import au.com.shiftyjelly.pocketcasts.podcasts.view.podcast.PodcastSettingsFragment
 import au.com.shiftyjelly.pocketcasts.podcasts.viewmodel.PodcastsViewModel
 import au.com.shiftyjelly.pocketcasts.preferences.Settings
 import au.com.shiftyjelly.pocketcasts.preferences.model.PodcastGridLayoutType
+import au.com.shiftyjelly.pocketcasts.reimagine.podcast.SharePodcastFragment
 import au.com.shiftyjelly.pocketcasts.search.SearchFragment
 import au.com.shiftyjelly.pocketcasts.ui.extensions.getColor
 import au.com.shiftyjelly.pocketcasts.ui.helper.FragmentHostListener
@@ -78,6 +81,7 @@ import au.com.shiftyjelly.pocketcasts.utils.extensions.hideShadow
 import au.com.shiftyjelly.pocketcasts.utils.featureflag.Feature
 import au.com.shiftyjelly.pocketcasts.utils.featureflag.FeatureFlag
 import au.com.shiftyjelly.pocketcasts.views.adapter.LockingDragAndDropCallback
+import au.com.shiftyjelly.pocketcasts.views.dialog.ConfirmationDialog
 import au.com.shiftyjelly.pocketcasts.views.extensions.quickScrollToTop
 import au.com.shiftyjelly.pocketcasts.views.fragments.BaseFragment
 import au.com.shiftyjelly.pocketcasts.views.fragments.BaseFragmentToolbar.ChromeCastButton.Shown
@@ -115,6 +119,13 @@ class PodcastsFragment :
 
     companion object {
         private const val LAST_ORIENTATION_NOT_SET = -1
+        private const val MENU_QUEUE_UNFINISHED = 1
+        private const val MENU_PLAY_OLDEST = 2
+        private const val MENU_DOWNLOAD_UNFINISHED = 3
+        private const val MENU_MARK_ALL_PLAYED = 4
+        private const val MENU_PODCAST_SETTINGS = 5
+        private const val MENU_SHARE = 6
+        private const val MENU_UNSUBSCRIBE = 7
         const val ARG_FOLDER_UUID = "ARG_FOLDER_UUID"
 
         fun newInstance(folderUuid: String): PodcastsFragment {
@@ -176,6 +187,7 @@ class PodcastsFragment :
             scope = viewLifecycleOwner.lifecycleScope,
             adapter = folderAdapter,
             commitItems = viewModel::reorderItems,
+            canDragHolder = { it !is FolderAdapter.PodcastViewHolder },
             canDrag = {
                 !settings.hidePodcastsWithNoUnfinishedEpisodes.value &&
                     !settings.sortPodcastsByUnfinishedCount.value &&
@@ -534,6 +546,97 @@ class PodcastsFragment :
         eventHorizon.track(PodcastsListPodcastTappedEvent)
         val fragment = PodcastFragment.newInstance(podcastUuid = podcast.uuid, sourceView = SourceView.PODCAST_LIST)
         (activity as FragmentHostListener).addFragment(fragment)
+    }
+
+    override fun onPodcastLongClick(podcast: Podcast, view: View) {
+        val popup = PopupMenu(requireContext(), view)
+        popup.menu.apply {
+            add(0, MENU_QUEUE_UNFINISHED, 0, getString(LR.string.podcastgpt_queue_unfinished))
+            add(0, MENU_PLAY_OLDEST, 1, getString(LR.string.podcastgpt_play_oldest))
+            add(0, MENU_DOWNLOAD_UNFINISHED, 2, getString(LR.string.podcastgpt_download_unfinished))
+            add(0, MENU_MARK_ALL_PLAYED, 3, getString(LR.string.podcastgpt_mark_all_played))
+            add(0, MENU_PODCAST_SETTINGS, 4, getString(LR.string.podcast_settings))
+            add(0, MENU_SHARE, 5, getString(LR.string.share))
+            add(0, MENU_UNSUBSCRIBE, 6, getString(LR.string.unsubscribe))
+        }
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                MENU_QUEUE_UNFINISHED, MENU_PLAY_OLDEST -> viewLifecycleOwner.lifecycleScope.launch {
+                    val episodes = viewModel.unfinishedEpisodes(podcast)
+                    if (episodes.isEmpty()) {
+                        showSnackBar(getString(LR.string.podcastgpt_no_unfinished))
+                    } else {
+                        viewModel.addUnfinishedToUpNext(
+                            episodes,
+                            playNext = item.itemId == MENU_PLAY_OLDEST,
+                        )
+                    }
+                }
+
+                MENU_DOWNLOAD_UNFINISHED -> viewLifecycleOwner.lifecycleScope.launch {
+                    val episodes = viewModel.unfinishedEpisodes(podcast)
+                    if (episodes.isEmpty()) {
+                        showSnackBar(getString(LR.string.podcastgpt_no_unfinished))
+                    } else {
+                        ConfirmationDialog.downloadWarningDialog(episodes.size, resources) {
+                            viewModel.downloadUnfinished(episodes)
+                        }?.show(parentFragmentManager, "podcastgpt_download_unfinished")
+                    }
+                }
+
+                MENU_MARK_ALL_PLAYED -> viewLifecycleOwner.lifecycleScope.launch {
+                    val episodes = viewModel.episodesNotPlayed(podcast)
+                    if (episodes.isNotEmpty()) {
+                        val label = if (episodes.size == 1) {
+                            getString(LR.string.mark_as_played_singular)
+                        } else {
+                            getString(LR.string.mark_as_played_plural, episodes.size)
+                        }
+                        ConfirmationDialog()
+                            .setTitle(getString(LR.string.are_you_sure))
+                            .setButtonType(ConfirmationDialog.ButtonType.Danger(label))
+                            .setOnConfirm { viewModel.markEpisodesPlayed(episodes) }
+                            .show(parentFragmentManager, "podcastgpt_mark_played")
+                    }
+                }
+
+                MENU_PODCAST_SETTINGS -> {
+                    val fragment = PodcastSettingsFragment.newInstance(
+                        uuid = podcast.uuid,
+                        title = podcast.title,
+                        darkTint = podcast.darkThemeTint(),
+                        lightTint = podcast.lightThemeTint(),
+                    )
+                    (activity as FragmentHostListener).addFragment(fragment)
+                }
+
+                MENU_SHARE -> {
+                    if (podcast.canShare) {
+                        SharePodcastFragment.newInstance(podcast, SourceView.PODCAST_LIST)
+                            .show(parentFragmentManager, "podcastgpt_share")
+                    } else {
+                        showSnackBar(getString(LR.string.sharing_is_not_available_for_private_podcasts))
+                    }
+                }
+
+                MENU_UNSUBSCRIBE -> viewLifecycleOwner.lifecycleScope.launch {
+                    val downloaded = viewModel.downloadedEpisodeCount(podcast)
+                    val title = when (downloaded) {
+                        0 -> getString(LR.string.are_you_sure)
+                        1 -> getString(LR.string.podcast_unsubscribe_downloaded_file_singular)
+                        else -> getString(LR.string.podcast_unsubscribe_downloaded_file_plural, downloaded)
+                    }
+                    ConfirmationDialog()
+                        .setTitle(title)
+                        .setSummary(getString(LR.string.podcast_unsubscribe_warning))
+                        .setButtonType(ConfirmationDialog.ButtonType.Danger(getString(LR.string.unsubscribe)))
+                        .setOnConfirm { viewModel.unsubscribe(podcast) }
+                        .show(parentFragmentManager, "podcastgpt_unsubscribe")
+                }
+            }
+            true
+        }
+        popup.show()
     }
 
     override fun onFolderClick(folderUuid: String, isUserInitiated: Boolean) {

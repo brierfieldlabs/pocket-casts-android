@@ -44,6 +44,7 @@ class LockingDragAndDropCallback<T>(
     private val adapter: LockableListAdapter<T, *>,
     private val commitItems: suspend (List<T>) -> Unit,
     private val canDrag: () -> Boolean = { true },
+    private val canDragHolder: (RecyclerView.ViewHolder) -> Boolean = { true },
 ) : ItemTouchHelper.Callback() {
     private var lastDraggedPosition = RecyclerView.NO_POSITION
     private var lastTargetPosition = RecyclerView.NO_POSITION
@@ -53,7 +54,7 @@ class LockingDragAndDropCallback<T>(
     override fun isLongPressDragEnabled(): Boolean = canDrag()
 
     override fun getMovementFlags(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
-        val dragFlags = if (canDrag() && viewHolder is LockableListAdapter.DraggableHolder) {
+        val dragFlags = if (canDrag() && canDragHolder(viewHolder) && viewHolder is LockableListAdapter.DraggableHolder) {
             ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT or ItemTouchHelper.START or ItemTouchHelper.END
         } else {
             0

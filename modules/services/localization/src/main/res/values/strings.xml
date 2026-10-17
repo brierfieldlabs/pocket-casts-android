@@ -30,6 +30,11 @@
     <string name="playing_bookmark">Playing \"%s\"</string>
     <string name="skipping_to">Skipping to %s</string>
     <string name="add_to_up_next">Add to Up Next</string>
+    <string name="podcastgpt_queue_unfinished">Add unfinished to Up Next (oldest first)</string>
+    <string name="podcastgpt_play_oldest">Play next unfinished episode</string>
+    <string name="podcastgpt_download_unfinished">Download unfinished episodes</string>
+    <string name="podcastgpt_mark_all_played">Mark all episodes as played</string>
+    <string name="podcastgpt_no_unfinished">No unfinished episodes</string>
     <string name="add_to_up_next_top">Play next in Up Next</string>
     <string name="add_to_up_next_bottom">Play last in Up Next</string>
     <string name="add_to_up_next_question">Add to up next?</string>

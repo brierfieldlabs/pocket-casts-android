@@ -2,14 +2,20 @@ package au.com.shiftyjelly.pocketcasts.podcasts.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import au.com.shiftyjelly.pocketcasts.analytics.SourceView
 import au.com.shiftyjelly.pocketcasts.models.entity.Folder
 import au.com.shiftyjelly.pocketcasts.models.entity.Podcast
+import au.com.shiftyjelly.pocketcasts.models.entity.PodcastEpisode
 import au.com.shiftyjelly.pocketcasts.models.to.FolderItem
+import au.com.shiftyjelly.pocketcasts.models.type.EpisodeDownloadStatus
 import au.com.shiftyjelly.pocketcasts.models.type.PodcastsSortType
 import au.com.shiftyjelly.pocketcasts.models.type.SignInState
 import au.com.shiftyjelly.pocketcasts.preferences.Settings
 import au.com.shiftyjelly.pocketcasts.preferences.model.BadgeType
+import au.com.shiftyjelly.pocketcasts.repositories.download.DownloadQueue
+import au.com.shiftyjelly.pocketcasts.repositories.download.DownloadType
 import au.com.shiftyjelly.pocketcasts.repositories.notification.NotificationHelper
+import au.com.shiftyjelly.pocketcasts.repositories.playback.PlaybackManager
 import au.com.shiftyjelly.pocketcasts.repositories.podcast.EpisodeManager
 import au.com.shiftyjelly.pocketcasts.repositories.podcast.FolderManager
 import au.com.shiftyjelly.pocketcasts.repositories.podcast.PodcastManager
@@ -18,6 +24,7 @@ import com.automattic.eventhorizon.EpisodeRecentlyPlayedSortOptionTooltipDismiss
 import com.automattic.eventhorizon.EpisodeRecentlyPlayedSortOptionTooltipShownEvent
 import com.automattic.eventhorizon.EventHorizon
 import com.automattic.eventhorizon.FolderShownEvent
+import com.automattic.eventhorizon.PodcastUnsubscribedEvent
 import com.automattic.eventhorizon.PodcastsListReorderedEvent
 import com.automattic.eventhorizon.PodcastsListShownEvent
 import com.automattic.eventhorizon.PullToRefreshSourceType
@@ -49,6 +56,8 @@ import kotlinx.coroutines.withContext
 class PodcastsViewModel @AssistedInject constructor(
     private val podcastManager: PodcastManager,
     private val episodeManager: EpisodeManager,
+    private val playbackManager: PlaybackManager,
+    private val downloadQueue: DownloadQueue,
     private val folderManager: FolderManager,
     private val settings: Settings,
     private val eventHorizon: EventHorizon,
@@ -252,6 +261,45 @@ class PodcastsViewModel @AssistedInject constructor(
                 .takeWhile { stateUuids -> stateUuids.size == sortedUuids.size && stateUuids != sortedUuids }
                 .collect()
         }
+    }
+
+    suspend fun unfinishedEpisodes(podcast: Podcast): List<PodcastEpisode> =
+        episodeManager.findEpisodesByPodcastOrderedByPublishDate(podcast)
+            .filter { !it.isFinished && !it.isArchived }
+            .sortedWith(compareBy<PodcastEpisode> { it.publishedDate }.thenBy { it.uuid })
+
+    suspend fun episodesNotPlayed(podcast: Podcast): List<PodcastEpisode> =
+        episodeManager.findEpisodesByPodcastOrdered(podcast).filter { !it.isFinished }
+
+    fun addUnfinishedToUpNext(episodes: List<PodcastEpisode>, playNext: Boolean) {
+        val limit = settings.getMaxUpNextEpisodes()
+        val count = if (playNext) 1 else limit
+        val newEpisodes = episodes.filterNot { playbackManager.upNextQueue.contains(it.uuid) }.take(count)
+        if (playNext) {
+            playbackManager.playEpisodesNext(newEpisodes, SourceView.PODCAST_LIST)
+        } else {
+            playbackManager.playEpisodesLast(newEpisodes, SourceView.PODCAST_LIST)
+        }
+    }
+
+    fun downloadUnfinished(episodes: List<PodcastEpisode>) {
+        val uuids = episodes.take(Settings.MAX_DOWNLOAD).map(PodcastEpisode::uuid)
+        downloadQueue.enqueueAll(uuids, DownloadType.UserTriggered(waitForWifi = false), SourceView.PODCAST_LIST)
+    }
+
+    fun markEpisodesPlayed(episodes: List<PodcastEpisode>) {
+        viewModelScope.launch {
+            episodeManager.markAllAsPlayed(episodes, playbackManager, podcastManager)
+        }
+    }
+
+    suspend fun downloadedEpisodeCount(podcast: Podcast): Int = withContext(Dispatchers.IO) {
+        podcastManager.countEpisodesInPodcastWithStatusBlocking(podcast.uuid, EpisodeDownloadStatus.Downloaded)
+    }
+
+    fun unsubscribe(podcast: Podcast) {
+        podcastManager.unsubscribeAsync(podcast.uuid, SourceView.PODCAST_LIST)
+        eventHorizon.track(PodcastUnsubscribedEvent(uuid = podcast.uuid, source = SourceView.PODCAST_LIST.analyticsValue))
     }
 
     fun refreshPodcasts() {

@@ -230,7 +230,9 @@ class FolderAdapter(
 
         fun bind(podcast: Podcast, badgeType: BadgeType, podcastUuidToBadge: Map<String, Int>, clickListener: ClickListener) {
             button?.setOnClickListener { clickListener.onPodcastClick(podcast, itemView) }
+            button?.setOnLongClickListener { clickListener.onPodcastLongClick(podcast, itemView); true }
             podcastCardView?.setOnClickListener { clickListener.onPodcastClick(podcast, itemView) }
+            podcastCardView?.setOnLongClickListener { clickListener.onPodcastLongClick(podcast, itemView); true }
             podcastTitle.text = podcast.title
             podcastTitle.showIf(isListLayout)
             author?.text = podcast.author
@@ -295,6 +297,7 @@ class FolderAdapter(
 
     interface ClickListener {
         fun onPodcastClick(podcast: Podcast, view: View)
+        fun onPodcastLongClick(podcast: Podcast, view: View)
         fun onFolderClick(folderUuid: String, isUserInitiated: Boolean)
     }
 }
