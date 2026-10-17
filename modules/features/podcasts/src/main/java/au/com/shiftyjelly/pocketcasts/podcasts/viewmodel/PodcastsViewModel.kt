@@ -294,7 +294,10 @@ class PodcastsViewModel @AssistedInject constructor(
         val byCount = withContext(Dispatchers.IO) {
             podcasts.map { podcast -> podcast to unfinishedEpisodes(podcast) }
                 .filter { (_, episodes) -> episodes.isNotEmpty() }
-                .sortedWith(compareBy<Pair<Podcast, List<PodcastEpisode>>> { it.second.size }.thenBy { it.first.title })
+                .sortedWith(
+                    compareBy<Pair<Podcast, List<PodcastEpisode>>> { it.second.size }
+                        .thenBy { it.first.title },
+                )
         }
         val alreadyQueued = playbackManager.upNextQueue.queueEpisodes.mapTo(mutableSetOf()) { it.uuid }
         playbackManager.upNextQueue.currentEpisode?.uuid?.let(alreadyQueued::add)
