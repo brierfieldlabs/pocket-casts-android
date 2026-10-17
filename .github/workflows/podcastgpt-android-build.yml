@@ -31,7 +31,7 @@ jobs:
         run: |
           ./gradlew :app:assembleDebugProd --no-daemon --max-workers=2 \
             -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8"
-      - name: Verify Android package and diagnostic setting
+      - name: Verify Android package and version
         shell: bash
         run: |
           set -euo pipefail
@@ -43,14 +43,19 @@ jobs:
           package=$("$aapt" dump badging "$apk" | grep "^package:")
           echo "$package"
           grep -F "name='au.com.shiftyjelly.pocketcasts.debug'" <<< "$package"
+          version=$(tr -d '\r\n' < podcastgpt.version)
+          grep -F "versionName='$version'" <<< "$package"
           version_code=$(sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p" <<< "$package")
-          test "${version_code:-0}" -ge 9464
+          IFS=. read -r major minor patch <<< "$version"
+          test "${version_code:-0}" -eq "$((major * 1000000 + minor * 1000 + patch))"
           "$apksigner" verify --print-certs "$apk" |
             grep -F "Signer #1 certificate SHA-256 digest: a7a8cc75251243fcabc1c5ae6c2eaa3c74ad9a464ae4a5679e56820cbd9eadc8"
-          sha256sum "$apk"
+          mkdir -p dist
+          cp "$apk" "dist/PodcastGPT-v${version}.apk"
+          sha256sum "dist/PodcastGPT-v${version}.apk"
       - uses: actions/upload-artifact@v4
         with:
-          name: podcastgpt-debugprod-pr-apk
-          path: app/build/outputs/apk/debugProd/*.apk
+          name: PodcastGPT-APK
+          path: dist/PodcastGPT-v*.apk
           if-no-files-found: error
           retention-days: 14
