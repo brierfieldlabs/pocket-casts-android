@@ -1,0 +1,49 @@
+name: PodcastGPT Android APK build
+
+on:
+  pull_request:
+    branches:
+      - add/podcastgpt-customisations
+
+permissions:
+  contents: read
+
+jobs:
+  debugprod:
+    name: Build debugProd APK (Hamblett CT142)
+    runs-on: [self-hosted, Linux, X64, podcastgpt-android]
+    timeout-minutes: 90
+    env:
+      ANDROID_HOME: /opt/android-sdk
+      ANDROID_SDK_ROOT: /opt/android-sdk
+      JAVA_HOME: /usr/lib/jvm/java-21-openjdk-amd64
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Verify PR head
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Assemble debugProd APK
+        run: |
+          ./gradlew :app:assembleDebugProd --no-daemon --max-workers=2 \
+            -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8"
+      - name: Verify Android package and diagnostic setting
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Rq 'boolean DEBUG = false' app/build/generated/source/buildConfig/debugProd
+          apk=$(find app/build/outputs/apk/debugProd -name '*.apk' -type f -print -quit)
+          test -n "$apk"
+          aapt=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -1)
+          apksigner=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)
+          "$aapt" dump badging "$apk" | grep -F "name='au.com.shiftyjelly.pocketcasts.debug'"
+          "$apksigner" verify --print-certs "$apk"
+          sha256sum "$apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: podcastgpt-debugprod-pr-apk
+          path: app/build/outputs/apk/debugProd/*.apk
+          if-no-files-found: error
+          retention-days: 14
