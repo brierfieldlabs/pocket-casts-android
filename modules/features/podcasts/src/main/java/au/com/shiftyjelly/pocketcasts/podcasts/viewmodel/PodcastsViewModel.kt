@@ -282,6 +282,46 @@ class PodcastsViewModel @AssistedInject constructor(
         }
     }
 
+    // Queue across podcasts from fewest unfinished first, with each podcast's
+    // episodes playing oldest to newest. Preserve the existing listening queue.
+    suspend fun queueVisiblePodcastsByUnfinishedCount(): Int {
+        val podcasts = uiState.value.items
+            .filterIsInstance<FolderItem.Podcast>()
+            .map { it.podcast }
+        val room = (settings.getMaxUpNextEpisodes() - playbackManager.upNextQueue.queueEpisodes.size)
+            .coerceAtLeast(0)
+        if (podcasts.isEmpty() || room == 0) return 0
+        val byCount = withContext(Dispatchers.IO) {
+            podcasts.map { podcast -> podcast to unfinishedEpisodes(podcast) }
+                .filter { (_, episodes) -> episodes.isNotEmpty() }
+                .sortedWith(
+                    compareBy<Pair<Podcast, List<PodcastEpisode>>> { it.second.size }
+                        .thenBy { it.first.title },
+                )
+        }
+        val alreadyQueued = playbackManager.upNextQueue.queueEpisodes.mapTo(mutableSetOf()) { it.uuid }
+        playbackManager.upNextQueue.currentEpisode?.uuid?.let(alreadyQueued::add)
+        val toQueue = buildList {
+            for ((_, episodes) in byCount) {
+                for (episode in episodes) {
+                    if (size >= room) break
+                    if (alreadyQueued.add(episode.uuid)) add(episode)
+                }
+                if (size >= room) break
+            }
+        }
+        if (toQueue.isNotEmpty()) {
+            playbackManager.playEpisodesLast(toQueue, SourceView.PODCAST_LIST)
+        }
+        return toQueue.size
+    }
+
+    fun playUnfinishedOldestFirst(episodes: List<PodcastEpisode>) {
+        // Unlike Play Next, this explicit action starts playback and queues the
+        // remaining episodes in chronological order.
+        playbackManager.playEpisodes(episodes.take(settings.getMaxUpNextEpisodes()), SourceView.PODCAST_LIST)
+    }
+
     fun downloadUnfinished(episodes: List<PodcastEpisode>) {
         val uuids = episodes.take(Settings.MAX_DOWNLOAD).map(PodcastEpisode::uuid)
         downloadQueue.enqueueAll(uuids, DownloadType.UserTriggered(waitForWifi = false), SourceView.PODCAST_LIST)

@@ -321,14 +321,67 @@ class PodcastFragment : BaseFragment() {
         }
     }
 
+    private fun selectEpisode(episode: PodcastEpisode) {
+        if (viewModel.multiSelectEpisodesHelper.listener == null) {
+            binding?.setupMultiSelect()
+        }
+        viewModel.multiSelectEpisodesHelper
+            .defaultLongPress(multiSelectable = episode, fragmentManager = childFragmentManager)
+    }
+
+    private fun showEpisodeLongPressOptions(episode: PodcastEpisode) {
+        val dialog = OptionsDialog().setTitle(episode.title)
+        if (!episode.isArchived && !episode.isFinished) {
+            dialog.addTextOption(
+                titleId = LR.string.podcast_player_play_from_episode,
+                imageId = IR.drawable.ic_play_all,
+                click = {
+                    if (!viewModel.playFromEpisodeOldestFirst(episode)) {
+                        showSnackBar(getString(LR.string.podcastgpt_no_unfinished))
+                    }
+                },
+            )
+        }
+        dialog.addTextOption(
+            titleId = if (episode.isArchived) {
+                LR.string.podcast_player_restore_episode
+            } else {
+                LR.string.podcast_player_dismiss_episode
+            },
+            imageId = if (episode.isArchived) IR.drawable.ic_unarchive else IR.drawable.ic_archive,
+            click = {
+                val dismiss = !episode.isArchived
+                viewLifecycleOwner.lifecycleScope.launch {
+                    viewModel.setEpisodeDismissed(episode, dismiss)
+                    if (dismiss) {
+                        showSnackBar(
+                            message = getString(LR.string.podcast_player_episode_dismissed),
+                            cta = getString(LR.string.bookmarks_deleted_undo),
+                            onCtaClick = {
+                                viewLifecycleOwner.lifecycleScope.launch {
+                                    viewModel.setEpisodeDismissed(episode, false)
+                                }
+                            },
+                        )
+                    }
+                }
+            },
+        ).addTextOption(
+            titleId = LR.string.playlist_select_episodes,
+            imageId = IR.drawable.ic_multiselect,
+            click = { selectEpisode(episode) },
+        )
+        dialog.show(parentFragmentManager, "podcast_player_episode_options")
+    }
+
     private fun <T> onRowLongPress(): (entity: T) -> Unit = {
         when (it) {
             is PodcastEpisode -> {
-                if (viewModel.multiSelectEpisodesHelper.listener == null) {
-                    binding?.setupMultiSelect()
+                if (viewModel.multiSelectEpisodesHelper.isMultiSelecting) {
+                    selectEpisode(it)
+                } else {
+                    showEpisodeLongPressOptions(it)
                 }
-                viewModel.multiSelectEpisodesHelper
-                    .defaultLongPress(multiSelectable = it, fragmentManager = childFragmentManager)
             }
 
             is Bookmark -> {
@@ -473,6 +526,15 @@ class PodcastFragment : BaseFragment() {
     private val onEpisodesOptionsClicked: () -> Unit = {
         eventHorizon.track(PodcastScreenOptionsTappedEvent)
         var optionsDialog = OptionsDialog()
+            .addTextOption(
+                titleId = LR.string.podcast_player_play_visible_unfinished,
+                imageId = IR.drawable.ic_play_all,
+                click = {
+                    if (!viewModel.playVisibleUnfinishedOldestFirst()) {
+                        showSnackBar(getString(LR.string.podcastgpt_no_unfinished))
+                    }
+                },
+            )
             .addTextOption(
                 titleId = LR.string.podcast_refresh_episodes,
                 imageId = IR.drawable.ic_refresh,

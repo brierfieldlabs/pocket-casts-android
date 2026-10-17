@@ -1,0 +1,70 @@
+# Podcast Player Roadmap
+
+Version in development: **v1.2.0**. User-facing releases use SemVer only, not
+`test`, `rc` or an automated APK per commit.
+
+## Accepted decisions
+
+- **Playback A:** Select a podcast or its oldest unfinished episode and continue
+  through newer unfinished episodes in chronological order without manual
+  playlist construction. The ordinary Play controls also need to support this
+  reliably: the new explicit **Play unfinished episodes (oldest first)** action
+  is the first implementation step. Continuous playback now defaults to on
+  for **new phone preference records**; explicit existing preferences win,
+  and queued episodes still take precedence. [#9](../../issues/9)
+- **Playback B:** Sort podcasts by fewest unfinished episodes; add unfinished
+  episodes to a listening queue in ascending count order, and oldest first
+  inside each podcast. Preserve existing Up Next. [#10](../../issues/10)
+- **Dismiss / Dismissed / Restore** are the UI names for upstream
+  archive/archive/unarchive. Dismissing doesn't change playback history,
+  playback position or played status; removes episodes from active episode
+  lists, unfinished counts and queues. Show Dismissed and Restore permit
+  recovery. The underlying archived flag, sync protocol and Android package
+  identity remain unchanged. Automatic dismissal can trigger existing
+  downloaded-audio cleanup; do not present it as equivalent to playing.
+  [#20](../../issues/20)
+- Podcast-specific download, cleanup and playback overrides, plus rolling
+  oldest-first offline downloads and episode title exclusions. [#11](../../issues/11),
+  [#14](../../issues/14), [#15](../../issues/15)
+- Adjustable equaliser, mono output and recurring chapter-title skipping,
+  subject to compatibility checks. [#12](../../issues/12), [#13](../../issues/13)
+- UK English and Podcast Addict-familiar wording without changing Pocket Casts
+  protocol fields or falsely relabelling deletion. [#16](../../issues/16)
+- Purple app icon, the name **Podcast Player**, reviewable upstream updates.
+  Preserve the current signed Android app identity for in-place updates.
+  [#8](../../issues/8)
+- **No Podcast Addict history import yet.** Podcast Addict remains the daily,
+  authoritative library. The 2026-10-17 .backup in IdeaPad Downloads is a
+  privately held read-only format sample, **not** migration authority.
+  On migration day use a fresh backup, a preview of safely matched episodes,
+  and user confirmation before modifying listening history or syncing to web.
+  The sample's SQLite indexes had integrity warnings. [#17](../../issues/17)
+- **Kitchen Hub later:** existing Pocket Casts web player first, with
+  supported sign-in and sync. No new web app/server without approval.
+  [#18](../../issues/18)
+
+## Engineering and release workflow
+
+- Read **AGENTS.md**, README, this ROADMAP, relevant issues and PRs before
+  implementation. Choose the smallest maintainable change. Brainstorming alone
+  does not authorise code or a production change.
+- Keep changes in reviewable PRs, reconcile issues and merge accepted changes
+  into `main` rather than proliferating permanent branches.
+- Do **not** run repeated full APK builds during feature development.
+  The GitHub Actions APK workflow is manually disabled. Use source checks or
+  focused compilation when needed, and produce one exact-head signed build
+  only once the feature batch is approved for on-device acceptance.
+  [#19](../../issues/19)
+- Verify the existing Android application ID, certificate and sync still work
+  before switching your phone from PodcastGPT v1.1.0.
+- Preserve existing Podcast Addict data and the user's Pocket Casts login.
+
+## Development order
+
+1. Source-only core playback actions and dismissal; verify the data rules.
+2. Complete the per-podcast options and queue behaviour.
+3. Rolling downloads, title exclusions and playback effects.
+4. Review terminology, icon, performance and remaining requested features.
+5. Confirm source validation, review PRs, then approve a single phone APK.
+6. Only after the player is accepted: design, preview, and separately approve
+   the Podcast Addict full-history import.
