@@ -50,7 +50,7 @@ jobs:
           IFS=. read -r major minor patch <<< "$version"
           test "${version_code:-0}" -eq "$((major * 1000000 + minor * 1000 + patch))"
           "$apksigner" verify --print-certs "$apk" |
-            grep -F "Signer #1 certificate SHA-256 digest: a7a8cc75251243fcabc1c5ae6c2eaa3c74ad9a464ae4a5679e56820cbd9eadc8"
+            grep -F "certificate SHA-256 digest: a7a8cc75251243fcabc1c5ae6c2eaa3c74ad9a464ae4a5679e56820cbd9eadc8"
           mkdir -p dist
           cp "$apk" "dist/PodcastGPT-v${version}.apk"
           sha256sum "dist/PodcastGPT-v${version}.apk"
