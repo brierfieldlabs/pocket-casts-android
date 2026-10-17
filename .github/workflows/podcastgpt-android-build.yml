@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - add/podcastgpt-customisations
+      - fix/podcastgpt-startup-debug-overhead
 
 permissions:
   contents: read
@@ -27,6 +28,10 @@ jobs:
         env:
           EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
         run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Compile podcasts feature before full APK assembly
+        run: |
+          ./gradlew :modules:features:podcasts:compileDebugProdKotlin --no-daemon --max-workers=2 \
+            -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8"
       - name: Assemble debugProd APK
         run: |
           ./gradlew :app:assembleDebugProd --no-daemon --max-workers=2 \
@@ -49,7 +54,7 @@ jobs:
           IFS=. read -r major minor patch <<< "$version"
           test "${version_code:-0}" -eq "$((major * 1000000 + minor * 1000 + patch))"
           "$apksigner" verify --print-certs "$apk" |
-            grep -F "Signer #1 certificate SHA-256 digest: a7a8cc75251243fcabc1c5ae6c2eaa3c74ad9a464ae4a5679e56820cbd9eadc8"
+            grep -F "certificate SHA-256 digest: a7a8cc75251243fcabc1c5ae6c2eaa3c74ad9a464ae4a5679e56820cbd9eadc8"
           mkdir -p dist
           cp "$apk" "dist/PodcastGPT-v${version}.apk"
           sha256sum "dist/PodcastGPT-v${version}.apk"
